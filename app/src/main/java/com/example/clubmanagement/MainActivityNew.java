@@ -27,6 +27,7 @@ public class MainActivityNew extends AppCompatActivity {
     private BottomNavigationView bottomNavigation;
     private MaterialButton btnDetailView;
     private TextView tvPageCounter;
+    private TextView tvAdminModeIndicator;
     private ProgressBar progressBar;
 
     private FirebaseManager firebaseManager;
@@ -100,6 +101,9 @@ public class MainActivityNew extends AppCompatActivity {
         super.onResume();
         // 중앙동아리 가입 여부를 다시 확인하여 가입된 경우 동아리 페이지로 리다이렉트
         checkCentralClubMembershipAndRedirect();
+
+        // 관리자 모드 표시 업데이트 (설정에서 돌아올 때를 위해)
+        updateAdminModeIndicator();
     }
 
     private void checkCentralClubMembershipAndRedirect() {
@@ -148,10 +152,21 @@ public class MainActivityNew extends AppCompatActivity {
         bottomNavigation = findViewById(R.id.bottomNavigation);
         btnDetailView = findViewById(R.id.btnDetailView);
         tvPageCounter = findViewById(R.id.tvPageCounter);
+        tvAdminModeIndicator = findViewById(R.id.tvAdminModeIndicator);
         progressBar = findViewById(R.id.progressBar);
 
         // 초기 페이지 카운터 설정
         updatePageCounter(0);
+
+        // 관리자 모드 표시 업데이트
+        updateAdminModeIndicator();
+    }
+
+    private void updateAdminModeIndicator() {
+        if (tvAdminModeIndicator != null) {
+            boolean isSuperAdmin = SettingsActivity.isSuperAdminMode(this);
+            tvAdminModeIndicator.setVisibility(isSuperAdmin ? android.view.View.VISIBLE : android.view.View.GONE);
+        }
     }
 
     private void loadCarouselData() {

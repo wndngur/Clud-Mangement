@@ -27,6 +27,26 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- Admin Mode Indicator (Center) -->
+        <TextView
+            android:id="@+id/tvAdminModeIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="관리자 모드 실행중"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:background="@android:color/holo_red_dark"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
         <!-- Settings Icon (Black) -->
         <ImageView
             android:id="@+id/ivSettings"
