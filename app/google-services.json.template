@@ -1,0 +1,19 @@
+{
+  "INSTRUCTION": "이 파일은 템플릿입니다. Firebase Console에서 실제 google-services.json을 다운로드하여 app/ 폴더에 배치하세요.",
+  "project_info": {
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_PROJECT_ID",
+    "storage_bucket": "YOUR_STORAGE_BUCKET"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "YOUR_APP_ID",
+        "android_client_info": {
+          "package_name": "com.example.clubmanagement"
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

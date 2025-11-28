@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gradlew.bat build:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(ping:*)",
+      "Bash(./gradlew.bat:*)",
+      "Bash(cmd //c \"gradlew.bat assembleDebug\")",
+      "Bash(cmd /c \"C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement\\gradlew.bat assembleDebug\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

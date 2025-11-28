@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_button1"
+        android:icon="@android:drawable/ic_menu_view"
+        android:title="버튼1"/>
+
+    <item
+        android:id="@+id/nav_button2"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:title="버튼2"/>
+
+    <item
+        android:id="@+id/nav_button3"
+        android:icon="@android:drawable/ic_menu_add"
+        android:title="버튼3"/>
+
+    <item
+        android:id="@+id/nav_button4"
+        android:icon="@android:drawable/ic_menu_gallery"
+        android:title="버튼4"/>
+</menu>
