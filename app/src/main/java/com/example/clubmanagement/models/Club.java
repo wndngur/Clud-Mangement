@@ -12,6 +12,7 @@ public class Club {
     private String location;        // 동아리방 위치
     private Timestamp createdAt;
     private Timestamp updatedAt;
+    private Timestamp foundedAt;    // 동아리 설립일
 
     // 공금 관련 필드
     private long totalBudget;       // 총 예산 (원)
@@ -21,8 +22,14 @@ public class Club {
     private int memberCount;        // 현재 인원 수
     private boolean isCentralClub;  // 중앙동아리 여부
 
-    // 중앙동아리 유지 최소 인원
-    public static final int CENTRAL_CLUB_MIN_MEMBERS = 20;
+    // 중앙동아리 유지 최소 인원 (15명 이상)
+    public static final int CENTRAL_CLUB_MAINTAIN_MIN_MEMBERS = 15;
+    // 중앙동아리 신청 가능 최소 일수 (약 6개월 = 180일)
+    public static final int CENTRAL_CLUB_MIN_DAYS = 180;
+    // 중앙동아리 신규 등록 최소 인원 (20명 이상)
+    public static final int CENTRAL_CLUB_REGISTER_MIN_MEMBERS = 20;
+    // 중앙동아리 신청 가능 최소 개월 수 (6개월)
+    public static final int CENTRAL_CLUB_MIN_MONTHS = 6;
 
     // Firebase requires no-argument constructor
     public Club() {
@@ -109,6 +116,14 @@ public class Club {
         this.location = location;
     }
 
+    public Timestamp getFoundedAt() {
+        return foundedAt;
+    }
+
+    public void setFoundedAt(Timestamp foundedAt) {
+        this.foundedAt = foundedAt;
+    }
+
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
@@ -162,29 +177,80 @@ public class Club {
         isCentralClub = centralClub;
     }
 
-    // 중앙동아리 유지 가능 여부 (20명 이상)
+    // 중앙동아리 유지 가능 여부 (17명 이상)
     public boolean canMaintainCentralStatus() {
-        return memberCount >= CENTRAL_CLUB_MIN_MEMBERS;
+        return memberCount >= CENTRAL_CLUB_MAINTAIN_MIN_MEMBERS;
+    }
+
+    // 중앙동아리 신규 등록 가능 여부 (20명 이상)
+    public boolean canRegisterAsCentral() {
+        return memberCount >= CENTRAL_CLUB_REGISTER_MIN_MEMBERS;
+    }
+
+    // 중앙동아리 유지까지 필요한 인원 수
+    public int getMembersNeededToMaintain() {
+        if (memberCount >= CENTRAL_CLUB_MAINTAIN_MIN_MEMBERS) {
+            return 0;
+        }
+        return CENTRAL_CLUB_MAINTAIN_MIN_MEMBERS - memberCount;
     }
 
     // 중앙동아리 등록까지 필요한 인원 수
     public int getMembersNeededForCentral() {
-        if (memberCount >= CENTRAL_CLUB_MIN_MEMBERS) {
+        if (memberCount >= CENTRAL_CLUB_REGISTER_MIN_MEMBERS) {
             return 0;
         }
-        return CENTRAL_CLUB_MIN_MEMBERS - memberCount;
+        return CENTRAL_CLUB_REGISTER_MIN_MEMBERS - memberCount;
     }
 
-    // 인원 현황 비율 계산 (0.0 ~ 1.0, 최대 1.0)
-    public float getMemberRatio() {
-        if (memberCount >= CENTRAL_CLUB_MIN_MEMBERS) {
+    // 인원 현황 비율 계산 (중앙동아리: 17명 기준, 일반동아리: 20명 기준)
+    public float getMemberRatio(boolean isCentral) {
+        int targetMembers = isCentral ? CENTRAL_CLUB_MAINTAIN_MIN_MEMBERS : CENTRAL_CLUB_REGISTER_MIN_MEMBERS;
+        if (memberCount >= targetMembers) {
             return 1.0f;
         }
-        return (float) memberCount / CENTRAL_CLUB_MIN_MEMBERS;
+        return (float) memberCount / targetMembers;
     }
 
     // 인원 현황 퍼센트 계산 (0 ~ 100)
-    public int getMemberPercent() {
-        return (int) (getMemberRatio() * 100);
+    public int getMemberPercent(boolean isCentral) {
+        return (int) (getMemberRatio(isCentral) * 100);
+    }
+
+    // 설립일로부터 경과한 일수 계산
+    public long getDaysSinceFounding() {
+        if (foundedAt == null) return 0;
+        long foundedMillis = foundedAt.toDate().getTime();
+        long currentMillis = System.currentTimeMillis();
+        long diffMillis = currentMillis - foundedMillis;
+        return diffMillis / (1000 * 60 * 60 * 24); // 밀리초를 일수로 변환
+    }
+
+    // 중앙동아리 신청 가능 여부 (설립 후 6개월 = 180일 이상)
+    public boolean canApplyForCentralByDate() {
+        return getDaysSinceFounding() >= CENTRAL_CLUB_MIN_DAYS;
+    }
+
+    // 중앙동아리 신청까지 남은 일수
+    public long getDaysUntilCentralEligible() {
+        long daysSinceFounding = getDaysSinceFounding();
+        if (daysSinceFounding >= CENTRAL_CLUB_MIN_DAYS) {
+            return 0;
+        }
+        return CENTRAL_CLUB_MIN_DAYS - daysSinceFounding;
+    }
+
+    // 설립일 진행률 계산 (0.0 ~ 1.0)
+    public float getFoundingProgressRatio() {
+        long daysSinceFounding = getDaysSinceFounding();
+        if (daysSinceFounding >= CENTRAL_CLUB_MIN_DAYS) {
+            return 1.0f;
+        }
+        return (float) daysSinceFounding / CENTRAL_CLUB_MIN_DAYS;
+    }
+
+    // 설립일 진행률 퍼센트 (0 ~ 100)
+    public int getFoundingProgressPercent() {
+        return (int) (getFoundingProgressRatio() * 100);
     }
 }

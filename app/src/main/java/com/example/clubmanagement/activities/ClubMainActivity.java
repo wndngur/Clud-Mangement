@@ -1,5 +1,6 @@
 package com.example.clubmanagement.activities;
 
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -18,6 +19,11 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.firebase.Timestamp;
+
+import java.util.Calendar;
+import java.util.Date;
 
 import com.bumptech.glide.Glide;
 import com.example.clubmanagement.R;
@@ -70,6 +76,15 @@ public class ClubMainActivity extends AppCompatActivity {
     private TextView tvMemberStatus;
     private TextView tvClubTypeBadge;
     private androidx.cardview.widget.CardView cardMemberCount;
+
+    // Founding Date UI Components
+    private TextView tvFoundingDate;
+    private TextView tvDaysSinceFounding;
+    private View viewFoundingProgress;
+    private TextView tvFoundingPercent;
+    private TextView tvFoundingStatus;
+    private ImageView ivEditFoundingDate;
+    private androidx.cardview.widget.CardView cardFoundingDate;
 
     // Data
     private List<Notice> notices;
@@ -158,6 +173,15 @@ public class ClubMainActivity extends AppCompatActivity {
         tvClubTypeBadge = findViewById(R.id.tvClubTypeBadge);
         cardMemberCount = findViewById(R.id.cardMemberCount);
 
+        // Founding date views
+        tvFoundingDate = findViewById(R.id.tvFoundingDate);
+        tvDaysSinceFounding = findViewById(R.id.tvDaysSinceFounding);
+        viewFoundingProgress = findViewById(R.id.viewFoundingProgress);
+        tvFoundingPercent = findViewById(R.id.tvFoundingPercent);
+        tvFoundingStatus = findViewById(R.id.tvFoundingStatus);
+        ivEditFoundingDate = findViewById(R.id.ivEditFoundingDate);
+        cardFoundingDate = findViewById(R.id.cardFoundingDate);
+
         tvClubName.setText(clubName);
     }
 
@@ -196,6 +220,7 @@ public class ClubMainActivity extends AppCompatActivity {
                         btnAddLink.setVisibility(View.VISIBLE);
                         ivEditBanner.setVisibility(View.VISIBLE);
                         ivEditBudget.setVisibility(View.VISIBLE);
+                        ivEditFoundingDate.setVisibility(View.VISIBLE);
                     }
                 }
             }
@@ -236,6 +261,7 @@ public class ClubMainActivity extends AppCompatActivity {
         ivEditBanner.setOnClickListener(v -> showEditBannerDialog());
         btnClubInfo.setOnClickListener(v -> openClubInfo());
         ivEditBudget.setOnClickListener(v -> showEditBudgetDialog());
+        ivEditFoundingDate.setOnClickListener(v -> showEditFoundingDateDialog());
 
         // Budget card click - open budget history
         cardBudget.setOnClickListener(v -> openBudgetHistory());
@@ -243,6 +269,20 @@ public class ClubMainActivity extends AppCompatActivity {
         // Member count card click - open member management (TODO: implement member management activity)
         cardMemberCount.setOnClickListener(v -> {
             Toast.makeText(this, "부원 관리 기능은 준비 중입니다", Toast.LENGTH_SHORT).show();
+        });
+
+        // Founding date card click - show info
+        cardFoundingDate.setOnClickListener(v -> {
+            if (currentClub != null && currentClub.getFoundedAt() != null) {
+                long days = currentClub.getDaysSinceFounding();
+                boolean canApply = currentClub.canApplyForCentralByDate();
+                String message = canApply ?
+                        "설립 후 " + days + "일이 경과하여 중앙동아리 신청이 가능합니다." :
+                        "중앙동아리 신청까지 " + currentClub.getDaysUntilCentralEligible() + "일 남았습니다.";
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "설립일이 설정되지 않았습니다", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -904,7 +944,10 @@ public class ClubMainActivity extends AppCompatActivity {
     }
 
     private void updateMemberCountUI(int memberCount, boolean isCentralClub) {
-        int minMembers = com.example.clubmanagement.models.Club.CENTRAL_CLUB_MIN_MEMBERS;
+        // 중앙동아리: 유지 17명, 일반동아리: 등록 20명
+        int maintainMin = com.example.clubmanagement.models.Club.CENTRAL_CLUB_MAINTAIN_MIN_MEMBERS;
+        int registerMin = com.example.clubmanagement.models.Club.CENTRAL_CLUB_REGISTER_MIN_MEMBERS;
+        int targetMembers = isCentralClub ? maintainMin : registerMin;
 
         // 현재 인원 수 표시
         tvCurrentMemberCount.setText(String.valueOf(memberCount));
@@ -913,15 +956,15 @@ public class ClubMainActivity extends AppCompatActivity {
         if (isCentralClub) {
             tvClubTypeBadge.setText("중앙동아리");
             tvClubTypeBadge.setBackgroundResource(R.drawable.badge_central_club);
-            tvRequiredMemberCount.setText(minMembers + "명 유지 필요");
+            tvRequiredMemberCount.setText(maintainMin + "명 유지 필요");
         } else {
             tvClubTypeBadge.setText("일반동아리");
             tvClubTypeBadge.setBackgroundResource(R.drawable.badge_general_club);
-            tvRequiredMemberCount.setText(minMembers + "명 필요");
+            tvRequiredMemberCount.setText(registerMin + "명 필요");
         }
 
         // 퍼센트 계산 (최대 100%)
-        int percent = memberCount >= minMembers ? 100 : (memberCount * 100 / minMembers);
+        int percent = memberCount >= targetMembers ? 100 : (memberCount * 100 / targetMembers);
         tvMemberPercent.setText(percent + "%");
 
         // 프로그레스바 너비 및 색상 설정
@@ -944,22 +987,22 @@ public class ClubMainActivity extends AppCompatActivity {
 
         // 상태 메시지 설정
         if (isCentralClub) {
-            // 중앙동아리인 경우
-            if (memberCount >= minMembers) {
+            // 중앙동아리인 경우 (17명 이상 유지 필요)
+            if (memberCount >= maintainMin) {
                 tvMemberStatus.setText("중앙동아리 유지 가능");
                 tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
             } else {
-                int needed = minMembers - memberCount;
+                int needed = maintainMin - memberCount;
                 tvMemberStatus.setText(needed + "명 더 필요합니다 (유지 불가 위험)");
                 tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_red_dark));
             }
         } else {
-            // 일반동아리인 경우
-            if (memberCount >= minMembers) {
+            // 일반동아리인 경우 (20명 이상 등록 가능)
+            if (memberCount >= registerMin) {
                 tvMemberStatus.setText("중앙동아리 등록 가능!");
                 tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
             } else {
-                int needed = minMembers - memberCount;
+                int needed = registerMin - memberCount;
                 tvMemberStatus.setText(needed + "명 더 모집 시 중앙동아리 등록 가능");
                 tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_orange_dark));
             }
@@ -994,6 +1037,8 @@ public class ClubMainActivity extends AppCompatActivity {
                 displayBudget();
                 // 인원 현황 표시 업데이트
                 displayMemberCount();
+                // 설립일 표시 업데이트
+                displayFoundingDate();
             }
 
             @Override
@@ -1002,6 +1047,7 @@ public class ClubMainActivity extends AppCompatActivity {
                 // 오류 시에도 기본값으로 표시
                 displayBudget();
                 displayMemberCount();
+                displayFoundingDate();
             }
         });
     }
@@ -1045,6 +1091,132 @@ public class ClubMainActivity extends AppCompatActivity {
                 currentClub = club;
                 tvClubName.setText(clubName);
                 Toast.makeText(ClubMainActivity.this, "동아리명이 변경되었습니다", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(ClubMainActivity.this, "저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // ========================================
+    // Founding Date Methods
+    // ========================================
+
+    private void displayFoundingDate() {
+        if (currentClub == null || currentClub.getFoundedAt() == null) {
+            updateFoundingDateUI(null);
+            return;
+        }
+
+        updateFoundingDateUI(currentClub.getFoundedAt());
+    }
+
+    private void updateFoundingDateUI(Timestamp foundedAt) {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy.MM.dd", java.util.Locale.KOREA);
+
+        if (foundedAt == null) {
+            tvFoundingDate.setText("미설정");
+            tvDaysSinceFounding.setText("0");
+            tvFoundingPercent.setText("0%");
+            tvFoundingStatus.setText("설립일을 설정해주세요");
+            tvFoundingStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.darker_gray));
+
+            // Progress bar를 0으로 설정
+            viewFoundingProgress.post(() -> {
+                android.view.ViewGroup.LayoutParams params = viewFoundingProgress.getLayoutParams();
+                params.width = 0;
+                viewFoundingProgress.setLayoutParams(params);
+            });
+            return;
+        }
+
+        // 설립일 표시
+        tvFoundingDate.setText(sdf.format(foundedAt.toDate()));
+
+        // 경과 일수 계산
+        long daysSinceFounding = currentClub.getDaysSinceFounding();
+        tvDaysSinceFounding.setText(String.valueOf(daysSinceFounding));
+
+        // 퍼센트 계산 (180일 기준, 최대 100%)
+        int minDays = com.example.clubmanagement.models.Club.CENTRAL_CLUB_MIN_DAYS;
+        int percent = daysSinceFounding >= minDays ? 100 : (int) ((daysSinceFounding * 100) / minDays);
+        tvFoundingPercent.setText(percent + "%");
+
+        // 프로그레스바 너비 설정
+        viewFoundingProgress.post(() -> {
+            int parentWidth = ((View) viewFoundingProgress.getParent()).getWidth();
+            int progressWidth = (int) (parentWidth * percent / 100.0f);
+            android.view.ViewGroup.LayoutParams params = viewFoundingProgress.getLayoutParams();
+            params.width = progressWidth;
+            viewFoundingProgress.setLayoutParams(params);
+        });
+
+        // 상태 메시지 설정
+        if (currentClub.canApplyForCentralByDate()) {
+            tvFoundingStatus.setText("중앙동아리 신청 가능 (6개월 이상 경과)");
+            tvFoundingStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
+        } else {
+            long daysRemaining = currentClub.getDaysUntilCentralEligible();
+            tvFoundingStatus.setText(daysRemaining + "일 후 중앙동아리 신청 가능");
+            tvFoundingStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_orange_dark));
+        }
+    }
+
+    private void showEditFoundingDateDialog() {
+        Calendar calendar = Calendar.getInstance();
+
+        // 현재 설립일이 있으면 그 날짜로 초기화
+        if (currentClub != null && currentClub.getFoundedAt() != null) {
+            calendar.setTime(currentClub.getFoundedAt().toDate());
+        }
+
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH);
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(
+                this,
+                (view, selectedYear, selectedMonth, selectedDay) -> {
+                    Calendar selectedDate = Calendar.getInstance();
+                    selectedDate.set(selectedYear, selectedMonth, selectedDay);
+
+                    // 미래 날짜 검증
+                    if (selectedDate.getTime().after(new Date())) {
+                        Toast.makeText(this, "설립일은 오늘 이전이어야 합니다", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    saveFoundingDate(new Timestamp(selectedDate.getTime()));
+                },
+                year, month, day
+        );
+
+        // 미래 날짜 선택 불가
+        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+        datePickerDialog.setTitle("동아리 설립일 선택");
+        datePickerDialog.show();
+    }
+
+    private void saveFoundingDate(Timestamp foundedAt) {
+        progressBar.setVisibility(View.VISIBLE);
+
+        String clubId = getClubId();
+        if (currentClub == null) {
+            currentClub = new com.example.clubmanagement.models.Club(clubId, clubName);
+        }
+
+        currentClub.setFoundedAt(foundedAt);
+
+        firebaseManager.saveClub(currentClub, new FirebaseManager.ClubCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.Club club) {
+                progressBar.setVisibility(View.GONE);
+                currentClub = club;
+                displayFoundingDate();
+                Toast.makeText(ClubMainActivity.this, "설립일이 저장되었습니다", Toast.LENGTH_SHORT).show();
             }
 
             @Override

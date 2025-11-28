@@ -38,12 +38,14 @@ import androidx.viewpager2.widget.ViewPager2;
 public class DetailActivity extends AppCompatActivity {
 
     private ImageView ivBack;
+    private ImageView ivSuperAdminSettings;
     private TextView tvDetailTitle;
     private TextView tvDetailDescription;
     private LinearLayout llFeatureList;
     private MaterialButton btnAction;
     private FloatingActionButton fabEdit;
     private ProgressBar progressBar;
+    private boolean isSuperAdminMode = false;
 
     // ViewPager2 for image carousel
     private ViewPager2 vpDetailImages;
@@ -74,6 +76,7 @@ public class DetailActivity extends AppCompatActivity {
         initViews();
         setupImagePickerLauncher();
         checkAdminStatus();
+        checkSuperAdminMode();
 
         if (fromClubList && clubName != null) {
             // ClubListActivity에서 온 경우
@@ -88,6 +91,7 @@ public class DetailActivity extends AppCompatActivity {
 
     private void initViews() {
         ivBack = findViewById(R.id.ivBack);
+        ivSuperAdminSettings = findViewById(R.id.ivSuperAdminSettings);
         tvDetailTitle = findViewById(R.id.tvDetailTitle);
         tvDetailDescription = findViewById(R.id.tvDetailDescription);
         llFeatureList = findViewById(R.id.llFeatureList);
@@ -99,12 +103,23 @@ public class DetailActivity extends AppCompatActivity {
         vpDetailImages = findViewById(R.id.vpDetailImages);
         llIndicator = findViewById(R.id.llIndicator);
 
-        // Initially hide edit button
+        // Initially hide buttons
         fabEdit.setVisibility(View.GONE);
+        ivSuperAdminSettings.setVisibility(View.GONE);
         progressBar.setVisibility(View.GONE);
 
         // Setup default ViewPager2 adapter to prevent crash
         setupDefaultImages();
+    }
+
+    private void checkSuperAdminMode() {
+        // 최고 관리자 모드인지 확인
+        isSuperAdminMode = com.example.clubmanagement.SettingsActivity.isSuperAdminMode(this);
+
+        // 최고 관리자 모드이고, 캐러셀에서 온 경우 (일반 동아리 목록에서 온 경우 제외)
+        if (isSuperAdminMode && !fromClubList) {
+            ivSuperAdminSettings.setVisibility(View.VISIBLE);
+        }
     }
 
     private void setupDefaultImages() {
@@ -349,6 +364,11 @@ public class DetailActivity extends AppCompatActivity {
         // 뒤로가기 버튼
         ivBack.setOnClickListener(v -> finish());
 
+        // 최고 관리자 설정 버튼
+        ivSuperAdminSettings.setOnClickListener(v -> {
+            openSuperAdminSettings();
+        });
+
         // 액션 버튼 - 회원가입 화면으로 이동 또는 일반 동아리 가입
         btnAction.setOnClickListener(v -> {
             if (fromClubList) {
@@ -558,5 +578,18 @@ public class DetailActivity extends AppCompatActivity {
             default:
                 return "동아리";
         }
+    }
+
+    private void openSuperAdminSettings() {
+        Intent intent = new Intent(this, SuperAdminSettingsActivity.class);
+        intent.putExtra("page_index", pageIndex);
+        intent.putExtra("club_name", getClubName(pageIndex));
+        intent.putExtra("club_id", "central_" + pageIndex);
+        if (currentItem != null) {
+            intent.putExtra("carousel_title", currentItem.getTitle());
+            intent.putExtra("carousel_description", currentItem.getDescription());
+            intent.putExtra("carousel_image_url", currentItem.getImageUrl());
+        }
+        startActivity(intent);
     }
 }

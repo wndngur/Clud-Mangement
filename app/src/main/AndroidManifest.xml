@@ -95,6 +95,13 @@
             android:label="공금 내역"
             android:parentActivityName=".activities.ClubMainActivity"/>
 
+        <!-- Super Admin Settings Activity -->
+        <activity
+            android:name=".activities.SuperAdminSettingsActivity"
+            android:exported="false"
+            android:label="최고 관리자 설정"
+            android:parentActivityName=".activities.DetailActivity"/>
+
         <!-- Old Main Activity (Backup) -->
         <activity
             android:name=".MainActivity"

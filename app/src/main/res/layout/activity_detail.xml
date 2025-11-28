@@ -61,12 +61,29 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
+    <!-- Super Admin Settings Button -->
+    <ImageView
+        android:id="@+id/ivSuperAdminSettings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_menu_manage"
+        android:contentDescription="최고 관리자 설정"
+        android:background="@drawable/back_button_background"
+        android:tint="@android:color/black"
+        android:elevation="8dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <!-- Edit FAB (Admin Only) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabEdit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
+        android:layout_marginTop="72dp"
         android:src="@android:drawable/ic_menu_edit"
         android:contentDescription="편집"
         android:visibility="gone"

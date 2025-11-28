@@ -16,8 +16,12 @@ import com.example.clubmanagement.R;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class ClubListActivity extends AppCompatActivity {
 
@@ -34,17 +38,21 @@ public class ClubListActivity extends AppCompatActivity {
         String name;
         String description;
         int memberCount; // 현재 인원 수
+        Date foundedAt;  // 설립일
 
-        ClubItem(String id, String name, String description, int memberCount) {
+        ClubItem(String id, String name, String description, int memberCount, Date foundedAt) {
             this.id = id;
             this.name = name;
             this.description = description;
             this.memberCount = memberCount;
+            this.foundedAt = foundedAt;
         }
     }
 
-    // 중앙동아리 최소 인원
-    private static final int CENTRAL_CLUB_MIN_MEMBERS = 20;
+    // 중앙동아리 등록 최소 인원 (신규 등록은 20명 필요)
+    private static final int CENTRAL_CLUB_REGISTER_MIN_MEMBERS = 20;
+    // 중앙동아리 신청 가능 최소 일수 (6개월 = 180일)
+    private static final int CENTRAL_CLUB_MIN_DAYS = 180;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -197,44 +205,56 @@ public class ClubListActivity extends AppCompatActivity {
         });
     }
 
+    private Date getDateDaysAgo(int daysAgo) {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, -daysAgo);
+        return cal.getTime();
+    }
+
     private void loadClubList() {
-        // Sample club data with member counts
+        // Sample club data with member counts and founding dates
         List<ClubItem> clubs = new ArrayList<>();
         clubs.add(new ClubItem(
             "computer_science_club",
             "컴퓨터공학과 학술동아리",
             "컴퓨터공학 전공 학생들이 함께 프로그래밍 공부와 프로젝트를 진행하는 동아리입니다. 매주 스터디와 세미나를 진행하며, 학기당 1회 이상 팀 프로젝트를 완성합니다.",
-            18 // 18명 - 2명 더 필요
+            18, // 18명 - 2명 더 필요
+            getDateDaysAgo(250) // 250일 전 설립 - 신청 가능
         ));
         clubs.add(new ClubItem(
             "english_conversation_club",
             "영어회화 동아리",
             "영어 회화 실력 향상을 목표로 하는 동아리입니다. 원어민 선생님과 함께하는 weekly conversation class와 영어 토론 활동을 진행합니다.",
-            22 // 22명 - 중앙동아리 등록 가능
+            22, // 22명 - 중앙동아리 등록 가능
+            getDateDaysAgo(400) // 400일 전 설립 - 신청 가능
         ));
         clubs.add(new ClubItem(
             "photography_club",
             "사진 동아리",
             "사진 촬영 기술과 편집을 배우고 함께 출사를 다니는 동아리입니다. 매달 주제를 정해 작품 활동을 하며, 연말에는 사진전을 개최합니다.",
-            12 // 12명 - 8명 더 필요
+            12, // 12명 - 8명 더 필요
+            getDateDaysAgo(90) // 90일 전 설립 - 90일 더 필요
         ));
         clubs.add(new ClubItem(
             "volunteer_club",
             "봉사 동아리",
             "지역사회 봉사활동을 중심으로 활동하는 동아리입니다. 매주 노인복지관, 아동센터 등에서 봉사활동을 진행하며, 연 2회 해외 봉사활동도 참여합니다.",
-            15 // 15명 - 5명 더 필요
+            15, // 15명 - 5명 더 필요
+            getDateDaysAgo(150) // 150일 전 설립 - 30일 더 필요
         ));
         clubs.add(new ClubItem(
             "band_club",
             "밴드 동아리",
             "음악을 사랑하는 학생들이 모여 밴드를 구성하고 공연하는 동아리입니다. 학기당 2회 정기공연을 개최하며, 교내외 행사에도 참여합니다.",
-            8 // 8명 - 12명 더 필요
+            8, // 8명 - 12명 더 필요
+            getDateDaysAgo(30) // 30일 전 설립 - 150일 더 필요
         ));
         clubs.add(new ClubItem(
             "startup_club",
             "창업 동아리",
             "아이디어를 사업화하고 창업을 준비하는 동아리입니다. 창업 교육, 멘토링, 팀 프로젝트를 진행하며 실제 창업 경진대회에도 참여합니다.",
-            25 // 25명 - 중앙동아리 등록 가능
+            25, // 25명 - 중앙동아리 등록 가능
+            getDateDaysAgo(365) // 1년 전 설립 - 신청 가능
         ));
 
         // Add accordion items to container, filtering out joined clubs
@@ -266,9 +286,19 @@ public class ClubListActivity extends AppCompatActivity {
         TextView tvMemberProgressPercent = accordionView.findViewById(R.id.tvMemberProgressPercent);
         TextView tvMemberStatusMessage = accordionView.findViewById(R.id.tvMemberStatusMessage);
 
+        // Founding date views
+        TextView tvFoundingDateText = accordionView.findViewById(R.id.tvFoundingDateText);
+        View viewFoundingProgressBar = accordionView.findViewById(R.id.viewFoundingProgressBar);
+        TextView tvFoundingProgressPercent = accordionView.findViewById(R.id.tvFoundingProgressPercent);
+        TextView tvFoundingStatusMessage = accordionView.findViewById(R.id.tvFoundingStatusMessage);
+
         // Set data
         tvClubName.setText(club.name);
         tvClubDescription.setText(club.description);
+
+        // Set founding date progress
+        updateFoundingProgressUI(club.foundedAt, tvFoundingDateText, viewFoundingProgressBar,
+            tvFoundingProgressPercent, tvFoundingStatusMessage);
 
         // Set member count progress
         updateMemberProgressUI(club.memberCount, tvMemberCountText, viewMemberProgressBar,
@@ -304,16 +334,65 @@ public class ClubListActivity extends AppCompatActivity {
         llClubListContainer.addView(accordionView);
     }
 
+    private void updateFoundingProgressUI(Date foundedAt, TextView tvFoundingDateText,
+            View viewFoundingProgressBar, TextView tvFoundingProgressPercent,
+            TextView tvFoundingStatusMessage) {
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd", Locale.KOREA);
+
+        if (foundedAt == null) {
+            tvFoundingDateText.setText("미설정");
+            tvFoundingProgressPercent.setText("0%");
+            tvFoundingStatusMessage.setText("설립일 정보 없음");
+            tvFoundingStatusMessage.setTextColor(
+                androidx.core.content.ContextCompat.getColor(this, android.R.color.darker_gray));
+            return;
+        }
+
+        // 경과 일수 계산
+        long diffMillis = System.currentTimeMillis() - foundedAt.getTime();
+        long daysSinceFounding = diffMillis / (1000 * 60 * 60 * 24);
+
+        // 설립일 텍스트 설정
+        tvFoundingDateText.setText(sdf.format(foundedAt) + " (" + daysSinceFounding + "일)");
+
+        // 퍼센트 계산 (180일 기준, 최대 100%)
+        int percent = daysSinceFounding >= CENTRAL_CLUB_MIN_DAYS ? 100 :
+            (int) ((daysSinceFounding * 100) / CENTRAL_CLUB_MIN_DAYS);
+        tvFoundingProgressPercent.setText(percent + "%");
+
+        // 프로그레스바 너비 설정
+        viewFoundingProgressBar.post(() -> {
+            int parentWidth = ((View) viewFoundingProgressBar.getParent()).getWidth();
+            int progressWidth = (int) (parentWidth * percent / 100.0f);
+            android.view.ViewGroup.LayoutParams params = viewFoundingProgressBar.getLayoutParams();
+            params.width = progressWidth;
+            viewFoundingProgressBar.setLayoutParams(params);
+        });
+
+        // 상태 메시지 설정 (180일 이상이면 중앙동아리 신청 가능)
+        if (daysSinceFounding >= CENTRAL_CLUB_MIN_DAYS) {
+            tvFoundingStatusMessage.setText("중앙동아리 신청 가능 (6개월 이상 경과)");
+            tvFoundingStatusMessage.setTextColor(
+                androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
+        } else {
+            long daysNeeded = CENTRAL_CLUB_MIN_DAYS - daysSinceFounding;
+            tvFoundingStatusMessage.setText(daysNeeded + "일 후 중앙동아리 신청 가능");
+            tvFoundingStatusMessage.setTextColor(
+                androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_orange_dark));
+        }
+    }
+
     private void updateMemberProgressUI(int memberCount, TextView tvMemberCountText,
             View viewMemberProgressBar, TextView tvMemberProgressPercent,
             TextView tvMemberStatusMessage) {
 
-        // 인원 텍스트 설정
-        tvMemberCountText.setText(memberCount + "/" + CENTRAL_CLUB_MIN_MEMBERS + "명");
+        // 인원 텍스트 설정 (일반동아리는 20명 기준)
+        tvMemberCountText.setText(memberCount + "/" + CENTRAL_CLUB_REGISTER_MIN_MEMBERS + "명");
 
         // 퍼센트 계산 (최대 100%)
-        int percent = memberCount >= CENTRAL_CLUB_MIN_MEMBERS ? 100 :
-            (memberCount * 100 / CENTRAL_CLUB_MIN_MEMBERS);
+        int percent = memberCount >= CENTRAL_CLUB_REGISTER_MIN_MEMBERS ? 100 :
+            (memberCount * 100 / CENTRAL_CLUB_REGISTER_MIN_MEMBERS);
         tvMemberProgressPercent.setText(percent + "%");
 
         // 프로그레스바 너비 설정
@@ -334,13 +413,13 @@ public class ClubListActivity extends AppCompatActivity {
             }
         });
 
-        // 상태 메시지 설정
-        if (memberCount >= CENTRAL_CLUB_MIN_MEMBERS) {
+        // 상태 메시지 설정 (20명 이상이면 중앙동아리 등록 가능)
+        if (memberCount >= CENTRAL_CLUB_REGISTER_MIN_MEMBERS) {
             tvMemberStatusMessage.setText("중앙동아리 등록 가능!");
             tvMemberStatusMessage.setTextColor(
                 androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
         } else {
-            int needed = CENTRAL_CLUB_MIN_MEMBERS - memberCount;
+            int needed = CENTRAL_CLUB_REGISTER_MIN_MEMBERS - memberCount;
             tvMemberStatusMessage.setText(needed + "명 더 모집 시 중앙동아리 등록 가능");
             tvMemberStatusMessage.setTextColor(
                 androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_orange_dark));

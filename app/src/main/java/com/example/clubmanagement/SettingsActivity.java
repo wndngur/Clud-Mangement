@@ -1,9 +1,8 @@
 package com.example.clubmanagement;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -12,26 +11,25 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.example.clubmanagement.models.AdminLevel;
-import com.example.clubmanagement.models.UserData;
-import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.button.MaterialButton;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    private FirebaseManager firebaseManager;
+    public static final String PREFS_NAME = "SuperAdminPrefs";
+    public static final String KEY_SUPER_ADMIN_MODE = "super_admin_mode_active";
+
     private MaterialButton btnSuperAdmin;
     private MaterialButton btnLogoutAdmin;
     private TextView tvAdminStatus;
     private ProgressBar progressBar;
-    private UserData currentUserData;
+    private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        firebaseManager = FirebaseManager.getInstance();
+        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -57,98 +55,37 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void loadAdminStatus() {
-        progressBar.setVisibility(ProgressBar.VISIBLE);
-
-        firebaseManager.getUserData(firebaseManager.getCurrentUserId(), new FirebaseManager.UserDataCallback() {
-            @Override
-            public void onSuccess(UserData userData) {
-                progressBar.setVisibility(ProgressBar.GONE);
-                currentUserData = userData;
-                updateAdminStatusDisplay();
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                progressBar.setVisibility(ProgressBar.GONE);
-                Toast.makeText(SettingsActivity.this, "상태 확인 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+        // 현재 최고 관리자 모드 상태 확인
+        boolean isSuperAdmin = isSuperAdminMode(this);
+        if (isSuperAdmin) {
+            tvAdminStatus.setText("현재 상태: 최고 관리자\n\n모든 동아리와 캐러셀을 관리할 수 있습니다.");
+            btnLogoutAdmin.setVisibility(View.VISIBLE);
+        } else {
+            tvAdminStatus.setText("현재 상태: 일반 사용자");
+            btnLogoutAdmin.setVisibility(View.GONE);
+        }
     }
 
     private void setupListeners() {
-        btnSuperAdmin.setOnClickListener(v -> showPasswordDialog("SUPER_ADMIN", null));
+        // 개발 중: 바로 최고 관리자 모드 활성화 (비밀번호 검증 생략)
+        btnSuperAdmin.setOnClickListener(v -> activateSuperAdminMode());
         btnLogoutAdmin.setOnClickListener(v -> logoutAdmin());
     }
 
-    private void showPasswordDialog(String adminLevel, String clubId) {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_admin_password, null);
-        EditText etPassword = dialogView.findViewById(R.id.etAdminPassword);
-
-        String title = adminLevel.equals("SUPER_ADMIN") ? "최고 관리자 인증" : "동아리 관리자 인증";
-        String message = adminLevel.equals("SUPER_ADMIN")
-                ? "최고 관리자 비밀번호를 입력하세요\n(기본값: superadmin123)"
-                : "동아리 관리자 비밀번호를 입력하세요\n(기본값: clubadmin123)";
-
-        new AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(message)
-                .setView(dialogView)
-                .setPositiveButton("인증", (dialog, which) -> {
-                    String password = etPassword.getText().toString().trim();
-                    if (password.isEmpty()) {
-                        Toast.makeText(this, "비밀번호를 입력해주세요", Toast.LENGTH_SHORT).show();
-                    } else {
-                        verifyAndSetAdmin(adminLevel, clubId, password);
-                    }
-                })
-                .setNegativeButton("취소", null)
-                .show();
+    private void activateSuperAdminMode() {
+        // 개발 중: 비밀번호 검증 없이 바로 활성화
+        setSuperAdminMode(true);
+        Toast.makeText(this, "최고 관리자 모드가 활성화되었습니다", Toast.LENGTH_SHORT).show();
+        loadAdminStatus();
     }
 
-    private void verifyAndSetAdmin(String adminLevel, String clubId, String password) {
-        progressBar.setVisibility(ProgressBar.VISIBLE);
-
-        firebaseManager.verifyAdminPassword(adminLevel, clubId, password, new FirebaseManager.PasswordVerifyCallback() {
-            @Override
-            public void onSuccess(boolean isValid, String level, String verifiedClubId) {
-                if (isValid) {
-                    setUserAdminLevel(level, verifiedClubId);
-                } else {
-                    progressBar.setVisibility(ProgressBar.GONE);
-                    Toast.makeText(SettingsActivity.this, "비밀번호가 일치하지 않습니다", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                progressBar.setVisibility(ProgressBar.GONE);
-                Toast.makeText(SettingsActivity.this, "인증 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+    private void setSuperAdminMode(boolean active) {
+        sharedPreferences.edit().putBoolean(KEY_SUPER_ADMIN_MODE, active).apply();
     }
 
-    private void setUserAdminLevel(String adminLevel, String clubId) {
-        String userId = firebaseManager.getCurrentUserId();
-
-        firebaseManager.setUserAdminLevel(userId, adminLevel, clubId, new FirebaseManager.SimpleCallback() {
-            @Override
-            public void onSuccess() {
-                progressBar.setVisibility(ProgressBar.GONE);
-
-                String message = adminLevel.equals("SUPER_ADMIN")
-                        ? "최고 관리자 권한이 활성화되었습니다"
-                        : "동아리 관리자 권한이 활성화되었습니다";
-                Toast.makeText(SettingsActivity.this, message, Toast.LENGTH_SHORT).show();
-
-                loadAdminStatus();
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                progressBar.setVisibility(ProgressBar.GONE);
-                Toast.makeText(SettingsActivity.this, "권한 설정 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+    public static boolean isSuperAdminMode(android.content.Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        return prefs.getBoolean(KEY_SUPER_ADMIN_MODE, false);
     }
 
     private void logoutAdmin() {
@@ -156,35 +93,12 @@ public class SettingsActivity extends AppCompatActivity {
                 .setTitle("관리자 로그아웃")
                 .setMessage("관리자 권한을 해제하시겠습니까?")
                 .setPositiveButton("해제", (dialog, which) -> {
-                    String userId = firebaseManager.getCurrentUserId();
-                    firebaseManager.setUserAdminLevel(userId, "NONE", null, new FirebaseManager.SimpleCallback() {
-                        @Override
-                        public void onSuccess() {
-                            Toast.makeText(SettingsActivity.this, "관리자 권한이 해제되었습니다", Toast.LENGTH_SHORT).show();
-                            loadAdminStatus();
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
-                            Toast.makeText(SettingsActivity.this, "권한 해제 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    });
+                    // 최고 관리자 모드 비활성화
+                    setSuperAdminMode(false);
+                    Toast.makeText(SettingsActivity.this, "관리자 권한이 해제되었습니다", Toast.LENGTH_SHORT).show();
+                    loadAdminStatus();
                 })
                 .setNegativeButton("취소", null)
                 .show();
-    }
-
-    private void updateAdminStatusDisplay() {
-        if (currentUserData == null || currentUserData.getAdminLevel() == null || currentUserData.getAdminLevel().equals("NONE")) {
-            tvAdminStatus.setText("현재 상태: 일반 사용자");
-            btnLogoutAdmin.setVisibility(View.GONE);
-        } else if (currentUserData.isSuperAdmin()) {
-            tvAdminStatus.setText("현재 상태: 최고 관리자\n\n모든 동아리와 캐러셀을 관리할 수 있습니다.");
-            btnLogoutAdmin.setVisibility(View.VISIBLE);
-        } else if (currentUserData.isClubAdmin()) {
-            String clubId = currentUserData.getClubId() != null ? currentUserData.getClubId() : "미지정";
-            tvAdminStatus.setText("현재 상태: 동아리 관리자\n동아리: " + clubId + "\n\n자신의 동아리만 관리할 수 있습니다.");
-            btnLogoutAdmin.setVisibility(View.VISIBLE);
-        }
     }
 }

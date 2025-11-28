@@ -971,4 +971,64 @@ public class FirebaseManager {
                 })
                 .addOnFailureListener(callback::onFailure);
     }
+
+    // ========================================
+    // Super Admin Methods
+    // ========================================
+
+    /**
+     * Delete carousel image from storage and clear URL in Firestore
+     */
+    public void deleteCarouselImage(int position, SimpleCallback callback) {
+        // First, get the carousel item to find the image URL
+        db.collection("carousel")
+                .whereEqualTo("position", position)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        callback.onSuccess();
+                        return;
+                    }
+
+                    com.google.firebase.firestore.DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                    String imageUrl = doc.getString("imageUrl");
+
+                    // Update Firestore to remove image URL
+                    doc.getReference().update("imageUrl", null)
+                            .addOnSuccessListener(aVoid -> {
+                                // If there was an image URL, delete from storage
+                                if (imageUrl != null && !imageUrl.isEmpty()) {
+                                    try {
+                                        StorageReference storageRef = storage.getReferenceFromUrl(imageUrl);
+                                        storageRef.delete()
+                                                .addOnSuccessListener(aVoid2 -> callback.onSuccess())
+                                                .addOnFailureListener(e -> {
+                                                    // Even if storage delete fails, Firestore was updated
+                                                    callback.onSuccess();
+                                                });
+                                    } catch (Exception e) {
+                                        callback.onSuccess();
+                                    }
+                                } else {
+                                    callback.onSuccess();
+                                }
+                            })
+                            .addOnFailureListener(callback::onFailure);
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * Cancel central club status - change to general club
+     */
+    public void cancelCentralClubStatus(String clubId, SimpleCallback callback) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isCentralClub", false);
+
+        db.collection("clubs")
+                .document(clubId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(callback::onFailure);
+    }
 }
