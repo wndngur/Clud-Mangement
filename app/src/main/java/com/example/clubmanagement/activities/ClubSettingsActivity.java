@@ -1,5 +1,6 @@
 package com.example.clubmanagement.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,6 +23,8 @@ public class ClubSettingsActivity extends AppCompatActivity {
     private FirebaseManager firebaseManager;
     private MaterialButton btnClubAdmin;
     private MaterialButton btnLogoutAdmin;
+    private MaterialButton btnMyClubs;
+    private MaterialButton btnGeneralClubs;
     private TextView tvAdminStatus;
     private TextView tvClubName;
     private ProgressBar progressBar;
@@ -67,6 +70,8 @@ public class ClubSettingsActivity extends AppCompatActivity {
     private void initViews() {
         btnClubAdmin = findViewById(R.id.btnClubAdmin);
         btnLogoutAdmin = findViewById(R.id.btnLogoutAdmin);
+        btnMyClubs = findViewById(R.id.btnMyClubs);
+        btnGeneralClubs = findViewById(R.id.btnGeneralClubs);
         tvAdminStatus = findViewById(R.id.tvAdminStatus);
         tvClubName = findViewById(R.id.tvClubName);
         progressBar = findViewById(R.id.progressBarSettings);
@@ -96,6 +101,19 @@ public class ClubSettingsActivity extends AppCompatActivity {
     private void setupListeners() {
         btnClubAdmin.setOnClickListener(v -> showPasswordDialog());
         btnLogoutAdmin.setOnClickListener(v -> logoutAdmin());
+        btnMyClubs.setOnClickListener(v -> openMyClubs());
+        btnGeneralClubs.setOnClickListener(v -> openGeneralClubsList());
+    }
+
+    private void openMyClubs() {
+        Intent intent = new Intent(ClubSettingsActivity.this, MyClubsActivity.class);
+        startActivity(intent);
+    }
+
+    private void openGeneralClubsList() {
+        Intent intent = new Intent(ClubSettingsActivity.this, ClubListActivity.class);
+        intent.putExtra("from_club_settings", true); // 중앙동아리 설정에서 왔다는 플래그
+        startActivity(intent);
     }
 
     private void showPasswordDialog() {

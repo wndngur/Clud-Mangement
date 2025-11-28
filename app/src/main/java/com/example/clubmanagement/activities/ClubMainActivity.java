@@ -53,6 +53,24 @@ public class ClubMainActivity extends AppCompatActivity {
     private TextView tvBannerDescription;
     private ProgressBar progressBar;
 
+    // Budget UI Components
+    private TextView tvCurrentBudget;
+    private TextView tvTotalBudget;
+    private View viewBudgetProgress;
+    private TextView tvBudgetPercent;
+    private TextView tvBudgetStatus;
+    private ImageView ivEditBudget;
+    private androidx.cardview.widget.CardView cardBudget;
+
+    // Member Count UI Components
+    private TextView tvCurrentMemberCount;
+    private TextView tvRequiredMemberCount;
+    private View viewMemberProgress;
+    private TextView tvMemberPercent;
+    private TextView tvMemberStatus;
+    private TextView tvClubTypeBadge;
+    private androidx.cardview.widget.CardView cardMemberCount;
+
     // Data
     private List<Notice> notices;
     private List<LinkButton> linkButtons;
@@ -83,15 +101,34 @@ public class ClubMainActivity extends AppCompatActivity {
 
         initViews();
         setupImagePickerLauncher();
+        setupBackPressedCallback();
         checkAdminStatus();
         loadAllData();
         setupListeners();
     }
 
+    private void setupBackPressedCallback() {
+        // 중앙동아리 메인 화면에서 뒤로가기 방지
+        // 앱을 종료하거나 아무 동작도 하지 않음
+        // 사용자가 원하면 홈 버튼으로 앱을 나갈 수 있음
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                moveTaskToBack(true);
+            }
+        });
+    }
+
     private void initViews() {
+        TextView tvJoinDate = findViewById(R.id.tvJoinDate);
         tvClubName = findViewById(R.id.tvClubName);
         ivEditClubName = findViewById(R.id.ivEditClubName);
         ivSettings = findViewById(R.id.ivSettings);
+
+        // Set join date (임시로 현재 날짜 표시)
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy.MM.dd", java.util.Locale.KOREA);
+        String currentDate = sdf.format(new java.util.Date());
+        tvJoinDate.setText("가입일: " + currentDate);
         llNoticesContainer = findViewById(R.id.llNoticesContainer);
         llLinkButtonsContainer = findViewById(R.id.llLinkButtonsContainer);
         btnAddNotice = findViewById(R.id.btnAddNotice);
@@ -102,6 +139,24 @@ public class ClubMainActivity extends AppCompatActivity {
         tvBannerTitle = findViewById(R.id.tvBannerTitle);
         tvBannerDescription = findViewById(R.id.tvBannerDescription);
         progressBar = findViewById(R.id.progressBar);
+
+        // Budget views
+        tvCurrentBudget = findViewById(R.id.tvCurrentBudget);
+        tvTotalBudget = findViewById(R.id.tvTotalBudget);
+        viewBudgetProgress = findViewById(R.id.viewBudgetProgress);
+        tvBudgetPercent = findViewById(R.id.tvBudgetPercent);
+        tvBudgetStatus = findViewById(R.id.tvBudgetStatus);
+        ivEditBudget = findViewById(R.id.ivEditBudget);
+        cardBudget = findViewById(R.id.cardBudget);
+
+        // Member count views
+        tvCurrentMemberCount = findViewById(R.id.tvCurrentMemberCount);
+        tvRequiredMemberCount = findViewById(R.id.tvRequiredMemberCount);
+        viewMemberProgress = findViewById(R.id.viewMemberProgress);
+        tvMemberPercent = findViewById(R.id.tvMemberPercent);
+        tvMemberStatus = findViewById(R.id.tvMemberStatus);
+        tvClubTypeBadge = findViewById(R.id.tvClubTypeBadge);
+        cardMemberCount = findViewById(R.id.cardMemberCount);
 
         tvClubName.setText(clubName);
     }
@@ -140,6 +195,7 @@ public class ClubMainActivity extends AppCompatActivity {
                         btnAddNotice.setVisibility(View.VISIBLE);
                         btnAddLink.setVisibility(View.VISIBLE);
                         ivEditBanner.setVisibility(View.VISIBLE);
+                        ivEditBudget.setVisibility(View.VISIBLE);
                     }
                 }
             }
@@ -179,6 +235,22 @@ public class ClubMainActivity extends AppCompatActivity {
         btnAddLink.setOnClickListener(v -> showAddLinkButtonDialog());
         ivEditBanner.setOnClickListener(v -> showEditBannerDialog());
         btnClubInfo.setOnClickListener(v -> openClubInfo());
+        ivEditBudget.setOnClickListener(v -> showEditBudgetDialog());
+
+        // Budget card click - open budget history
+        cardBudget.setOnClickListener(v -> openBudgetHistory());
+
+        // Member count card click - open member management (TODO: implement member management activity)
+        cardMemberCount.setOnClickListener(v -> {
+            Toast.makeText(this, "부원 관리 기능은 준비 중입니다", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void openBudgetHistory() {
+        Intent intent = new Intent(ClubMainActivity.this, BudgetHistoryActivity.class);
+        intent.putExtra("club_id", getClubId());
+        intent.putExtra("club_name", clubName);
+        startActivity(intent);
     }
 
     private void openClubSettings() {
@@ -255,7 +327,11 @@ public class ClubMainActivity extends AppCompatActivity {
         ImageView ivDelete = accordionView.findViewById(R.id.ivDeleteNotice);
 
         tvTitle.setText(notice.getTitle());
+
+        // Enable hyperlinks in content
         tvContent.setText(notice.getContent());
+        tvContent.setAutoLinkMask(android.text.util.Linkify.WEB_URLS | android.text.util.Linkify.EMAIL_ADDRESSES);
+        tvContent.setLinksClickable(true);
 
         // Show admin buttons if admin
         if (isAdmin) {
@@ -688,6 +764,209 @@ public class ClubMainActivity extends AppCompatActivity {
     }
 
     // ========================================
+    // Budget Methods
+    // ========================================
+
+    private void displayBudget() {
+        if (currentClub == null) {
+            // 기본값 표시
+            updateBudgetUI(0, 0);
+            return;
+        }
+
+        long currentBudget = currentClub.getCurrentBudget();
+        long totalBudget = currentClub.getTotalBudget();
+        updateBudgetUI(currentBudget, totalBudget);
+    }
+
+    private void updateBudgetUI(long currentBudget, long totalBudget) {
+        // 금액 포맷팅
+        java.text.NumberFormat numberFormat = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA);
+        tvCurrentBudget.setText(numberFormat.format(currentBudget));
+        tvTotalBudget.setText(numberFormat.format(totalBudget) + "원");
+
+        // 퍼센트 계산
+        final int percent;
+        if (totalBudget > 0) {
+            percent = (int) ((currentBudget * 100) / totalBudget);
+        } else {
+            percent = 0;
+        }
+        tvBudgetPercent.setText(percent + "%");
+
+        // 프로그래스바 너비 조절
+        viewBudgetProgress.post(() -> {
+            int parentWidth = ((View) viewBudgetProgress.getParent()).getWidth();
+            int progressWidth = (int) (parentWidth * percent / 100.0f);
+            android.view.ViewGroup.LayoutParams params = viewBudgetProgress.getLayoutParams();
+            params.width = progressWidth;
+            viewBudgetProgress.setLayoutParams(params);
+        });
+
+        // 상태 텍스트 설정
+        if (percent >= 50) {
+            tvBudgetStatus.setText("잔액이 충분합니다");
+            tvBudgetStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
+        } else if (percent >= 20) {
+            tvBudgetStatus.setText("잔액이 부족해지고 있습니다");
+            tvBudgetStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_orange_dark));
+        } else {
+            tvBudgetStatus.setText("잔액이 부족합니다");
+            tvBudgetStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_red_dark));
+        }
+    }
+
+    private void showEditBudgetDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_budget, null);
+        EditText etCurrentBudget = dialogView.findViewById(R.id.etCurrentBudget);
+        EditText etTotalBudget = dialogView.findViewById(R.id.etTotalBudget);
+
+        // 현재 값 설정
+        if (currentClub != null) {
+            etCurrentBudget.setText(String.valueOf(currentClub.getCurrentBudget()));
+            etTotalBudget.setText(String.valueOf(currentClub.getTotalBudget()));
+        } else {
+            etCurrentBudget.setText("0");
+            etTotalBudget.setText("0");
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("공금 설정")
+                .setView(dialogView)
+                .setPositiveButton("저장", (dialog, which) -> {
+                    String currentBudgetStr = etCurrentBudget.getText().toString().trim();
+                    String totalBudgetStr = etTotalBudget.getText().toString().trim();
+
+                    if (currentBudgetStr.isEmpty() || totalBudgetStr.isEmpty()) {
+                        Toast.makeText(this, "금액을 입력해주세요", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    try {
+                        long currentBudget = Long.parseLong(currentBudgetStr);
+                        long totalBudget = Long.parseLong(totalBudgetStr);
+
+                        if (totalBudget < currentBudget) {
+                            Toast.makeText(this, "총 예산은 현재 잔액보다 커야 합니다", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        saveBudget(currentBudget, totalBudget);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, "올바른 금액을 입력해주세요", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    private void saveBudget(long currentBudget, long totalBudget) {
+        progressBar.setVisibility(View.VISIBLE);
+
+        String clubId = getClubId();
+        if (currentClub == null) {
+            currentClub = new com.example.clubmanagement.models.Club(clubId, clubName);
+        }
+
+        currentClub.setCurrentBudget(currentBudget);
+        currentClub.setTotalBudget(totalBudget);
+
+        firebaseManager.saveClub(currentClub, new FirebaseManager.ClubCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.Club club) {
+                progressBar.setVisibility(View.GONE);
+                currentClub = club;
+                displayBudget();
+                Toast.makeText(ClubMainActivity.this, "공금이 저장되었습니다", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(ClubMainActivity.this, "저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // ========================================
+    // Member Count Methods
+    // ========================================
+
+    private void displayMemberCount() {
+        if (currentClub == null) {
+            updateMemberCountUI(0, true);
+            return;
+        }
+
+        int memberCount = currentClub.getMemberCount();
+        boolean isCentral = currentClub.isCentralClub();
+        updateMemberCountUI(memberCount, isCentral);
+    }
+
+    private void updateMemberCountUI(int memberCount, boolean isCentralClub) {
+        int minMembers = com.example.clubmanagement.models.Club.CENTRAL_CLUB_MIN_MEMBERS;
+
+        // 현재 인원 수 표시
+        tvCurrentMemberCount.setText(String.valueOf(memberCount));
+
+        // 동아리 유형 배지 설정
+        if (isCentralClub) {
+            tvClubTypeBadge.setText("중앙동아리");
+            tvClubTypeBadge.setBackgroundResource(R.drawable.badge_central_club);
+            tvRequiredMemberCount.setText(minMembers + "명 유지 필요");
+        } else {
+            tvClubTypeBadge.setText("일반동아리");
+            tvClubTypeBadge.setBackgroundResource(R.drawable.badge_general_club);
+            tvRequiredMemberCount.setText(minMembers + "명 필요");
+        }
+
+        // 퍼센트 계산 (최대 100%)
+        int percent = memberCount >= minMembers ? 100 : (memberCount * 100 / minMembers);
+        tvMemberPercent.setText(percent + "%");
+
+        // 프로그레스바 너비 및 색상 설정
+        viewMemberProgress.post(() -> {
+            int parentWidth = ((View) viewMemberProgress.getParent()).getWidth();
+            int progressWidth = (int) (parentWidth * percent / 100.0f);
+            android.view.ViewGroup.LayoutParams params = viewMemberProgress.getLayoutParams();
+            params.width = progressWidth;
+            viewMemberProgress.setLayoutParams(params);
+
+            // 색상 설정 (인원에 따라 다르게)
+            if (percent >= 100) {
+                viewMemberProgress.setBackgroundResource(R.drawable.member_progress_fill);
+            } else if (percent >= 75) {
+                viewMemberProgress.setBackgroundResource(R.drawable.member_progress_fill_warning);
+            } else {
+                viewMemberProgress.setBackgroundResource(R.drawable.member_progress_fill_danger);
+            }
+        });
+
+        // 상태 메시지 설정
+        if (isCentralClub) {
+            // 중앙동아리인 경우
+            if (memberCount >= minMembers) {
+                tvMemberStatus.setText("중앙동아리 유지 가능");
+                tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
+            } else {
+                int needed = minMembers - memberCount;
+                tvMemberStatus.setText(needed + "명 더 필요합니다 (유지 불가 위험)");
+                tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_red_dark));
+            }
+        } else {
+            // 일반동아리인 경우
+            if (memberCount >= minMembers) {
+                tvMemberStatus.setText("중앙동아리 등록 가능!");
+                tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
+            } else {
+                int needed = minMembers - memberCount;
+                tvMemberStatus.setText(needed + "명 더 모집 시 중앙동아리 등록 가능");
+                tvMemberStatus.setTextColor(androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_orange_dark));
+            }
+        }
+    }
+
+    // ========================================
     // Club Name Methods
     // ========================================
 
@@ -704,12 +983,25 @@ public class ClubMainActivity extends AppCompatActivity {
                 } else {
                     // Club doesn't exist yet, create it with current name
                     currentClub = new com.example.clubmanagement.models.Club(clubId, clubName);
+                    // 기본 공금 설정
+                    currentClub.setTotalBudget(500000);
+                    currentClub.setCurrentBudget(150000);
+                    // 기본 인원 설정 (중앙동아리로 가정)
+                    currentClub.setCentralClub(true);
+                    currentClub.setMemberCount(15);
                 }
+                // 공금 표시 업데이트
+                displayBudget();
+                // 인원 현황 표시 업데이트
+                displayMemberCount();
             }
 
             @Override
             public void onFailure(Exception e) {
                 Toast.makeText(ClubMainActivity.this, "동아리 정보 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                // 오류 시에도 기본값으로 표시
+                displayBudget();
+                displayMemberCount();
             }
         });
     }

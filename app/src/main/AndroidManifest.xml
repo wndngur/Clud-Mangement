@@ -76,6 +76,25 @@
             android:exported="false"
             android:label="동아리 추천"/>
 
+        <!-- Club List Activity -->
+        <activity
+            android:name=".activities.ClubListActivity"
+            android:exported="false"
+            android:label="일반 동아리 목록"/>
+
+        <!-- My Clubs Activity -->
+        <activity
+            android:name=".activities.MyClubsActivity"
+            android:exported="false"
+            android:label="내가 가입한 동아리"/>
+
+        <!-- Budget History Activity -->
+        <activity
+            android:name=".activities.BudgetHistoryActivity"
+            android:exported="false"
+            android:label="공금 내역"
+            android:parentActivityName=".activities.ClubMainActivity"/>
+
         <!-- Old Main Activity (Backup) -->
         <activity
             android:name=".MainActivity"

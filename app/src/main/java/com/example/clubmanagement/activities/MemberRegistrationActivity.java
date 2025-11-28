@@ -6,6 +6,7 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
 import com.example.clubmanagement.R;
+import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -30,18 +32,30 @@ public class MemberRegistrationActivity extends AppCompatActivity {
     private MaterialButton btnRegister;
     private View overlayBackground;
     private CardView cardApprovalStatus;
+    private ProgressBar progressBar;
 
     private String clubName;
+    private String centralClubId;
+    private boolean isCentralClub = false;
+    private FirebaseManager firebaseManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_member_registration);
 
-        // Intent에서 동아리 이름 받기
+        firebaseManager = FirebaseManager.getInstance();
+
+        // Intent에서 동아리 정보 받기
         clubName = getIntent().getStringExtra("club_name");
+        isCentralClub = getIntent().getBooleanExtra("is_central_club", false);
+        centralClubId = getIntent().getStringExtra("central_club_id");
+
         if (clubName == null || clubName.isEmpty()) {
-            clubName = "ㅇㅇㅇ"; // 기본값
+            clubName = "동아리"; // 기본값
+        }
+        if (centralClubId == null || centralClubId.isEmpty()) {
+            centralClubId = clubName.replaceAll("\\s+", "_").toLowerCase();
         }
 
         initViews();
@@ -62,6 +76,7 @@ public class MemberRegistrationActivity extends AppCompatActivity {
         btnRegister = findViewById(R.id.btnRegister);
         overlayBackground = findViewById(R.id.overlayBackground);
         cardApprovalStatus = findViewById(R.id.cardApprovalStatus);
+        progressBar = findViewById(R.id.progressBar);
     }
 
     private void setupTitle() {
@@ -80,7 +95,7 @@ public class MemberRegistrationActivity extends AppCompatActivity {
             fetchSampleData();
         });
 
-        // 가입하기 버튼
+        // 가입신청 하기 버튼
         btnRegister.setOnClickListener(v -> {
             if (validateInputs()) {
                 registerMember();
@@ -162,18 +177,72 @@ public class MemberRegistrationActivity extends AppCompatActivity {
         String phone = etPhone.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
 
-        // TODO: Firebase 또는 서버에 회원 정보 저장
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
 
-        // 토스트 메시지 표시
-        Toast.makeText(this, "가입이 완료되었습니다!", Toast.LENGTH_SHORT).show();
+        if (isCentralClub) {
+            // 중앙동아리 가입 처리 - Firebase에 저장
+            firebaseManager.joinCentralClub(centralClubId, clubName, new FirebaseManager.SimpleCallback() {
+                @Override
+                public void onSuccess() {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
 
-        // ClubMainActivity로 이동
-        Intent intent = new Intent(MemberRegistrationActivity.this, ClubMainActivity.class);
-        intent.putExtra("club_name", clubName);
-        startActivity(intent);
+                    // 토스트 메시지에 동아리 이름 포함
+                    String message = clubName + " 동아리 가입이 완료되었습니다!";
+                    Toast.makeText(MemberRegistrationActivity.this, message, Toast.LENGTH_LONG).show();
 
-        // 현재 액티비티 종료
-        finish();
+                    // 가입 완료 후 동아리 메인 페이지로 이동
+                    Intent intent = new Intent(MemberRegistrationActivity.this, ClubMainActivity.class);
+                    intent.putExtra("club_name", clubName);
+                    intent.putExtra("club_id", centralClubId);
+                    // 이전 액티비티 스택 모두 제거하고 새로 시작
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                    Toast.makeText(MemberRegistrationActivity.this,
+                        "가입 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            // 일반 동아리 가입 처리
+            firebaseManager.joinGeneralClub(centralClubId, clubName, new FirebaseManager.SimpleCallback() {
+                @Override
+                public void onSuccess() {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+
+                    String message = clubName + " 동아리 가입이 완료되었습니다!";
+                    Toast.makeText(MemberRegistrationActivity.this, message, Toast.LENGTH_LONG).show();
+
+                    Intent intent = new Intent(MemberRegistrationActivity.this, ClubMainActivity.class);
+                    intent.putExtra("club_name", clubName);
+                    intent.putExtra("club_id", centralClubId);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                    Toast.makeText(MemberRegistrationActivity.this,
+                        "가입 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     private void showApprovalStatus() {

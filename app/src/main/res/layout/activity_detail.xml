@@ -5,13 +5,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Top Half: Image -->
-    <ImageView
-        android:id="@+id/ivDetailImage"
+    <!-- Top Half: Image Carousel -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/vpDetailImages"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:scaleType="centerCrop"
-        android:contentDescription="상세 이미지"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/guidelineHalf"
         app:layout_constraintStart_toStartOf="parent"
@@ -30,9 +28,23 @@
         android:layout_width="match_parent"
         android:layout_height="120dp"
         android:background="@drawable/gradient_bottom_overlay"
-        app:layout_constraintBottom_toBottomOf="@id/ivDetailImage"
+        app:layout_constraintBottom_toTopOf="@id/guidelineHalf"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Carousel Indicator -->
+    <LinearLayout
+        android:id="@+id/llIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="32dp"
+        android:elevation="8dp"
+        app:layout_constraintBottom_toTopOf="@id/guidelineHalf"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        <!-- Indicator dots will be added dynamically -->
+    </LinearLayout>
 
     <!-- Back Button -->
     <ImageView
@@ -43,8 +55,8 @@
         android:padding="12dp"
         android:src="@android:drawable/ic_menu_close_clear_cancel"
         android:contentDescription="뒤로가기"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:tint="@android:color/white"
+        android:background="@drawable/back_button_background"
+        android:tint="@android:color/black"
         android:elevation="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>

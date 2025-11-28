@@ -62,22 +62,27 @@ public class CarouselAdapter extends RecyclerView.Adapter<CarouselAdapter.Carous
             tvCarouselTitle.setText(item.getTitle());
             tvCarouselDescription.setText(item.getDescription());
 
-            // Load image from Firebase URL or local resource
+            // Load background image from Firebase URL or local resource
             if (item.hasFirebaseImage()) {
-                // Load from Firebase Storage URL
+                // Load background from Firebase Storage URL
                 Glide.with(itemView.getContext())
                         .load(item.getImageUrl())
                         .centerCrop()
-                        .into(ivCarouselImage);
-                ivCarouselImage.setVisibility(View.VISIBLE);
+                        .into(ivCarouselBackground);
+                ivCarouselBackground.setVisibility(View.VISIBLE);
 
-                // Hide background when image is loaded
-                ivCarouselBackground.setVisibility(View.GONE);
+                // Hide icon
+                ivCarouselImage.setVisibility(View.GONE);
             } else if (item.getImageRes() != 0) {
-                // Load from local resource
-                ivCarouselImage.setImageResource(item.getImageRes());
-                ivCarouselImage.setVisibility(View.VISIBLE);
-                ivCarouselBackground.setVisibility(View.GONE);
+                // Load background from local drawable resource
+                Glide.with(itemView.getContext())
+                        .load(item.getImageRes())
+                        .centerCrop()
+                        .into(ivCarouselBackground);
+                ivCarouselBackground.setVisibility(View.VISIBLE);
+
+                // Hide icon
+                ivCarouselImage.setVisibility(View.GONE);
             } else {
                 // Show colored background if no image
                 ivCarouselImage.setVisibility(View.GONE);

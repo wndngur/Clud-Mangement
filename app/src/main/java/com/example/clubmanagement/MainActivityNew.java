@@ -45,9 +45,101 @@ public class MainActivityNew extends AppCompatActivity {
 
         firebaseManager = FirebaseManager.getInstance();
 
-        initViews();
-        loadCarouselData();
-        setupListeners();
+        // 중앙동아리 가입 여부 확인
+        checkCentralClubMembership();
+    }
+
+    private void checkCentralClubMembership() {
+        // ProgressBar 먼저 찾기
+        progressBar = findViewById(R.id.progressBar);
+        progressBar.setVisibility(ProgressBar.VISIBLE);
+
+        // 로그인되지 않은 경우 바로 메인 화면 표시
+        if (firebaseManager.getCurrentUserId() == null) {
+            progressBar.setVisibility(ProgressBar.GONE);
+            initViews();
+            loadCarouselData();
+            setupListeners();
+            return;
+        }
+
+        firebaseManager.getCurrentUser(new FirebaseManager.UserCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.User user) {
+                progressBar.setVisibility(ProgressBar.GONE);
+
+                if (user != null && user.hasJoinedCentralClub()) {
+                    // 중앙동아리에 가입된 경우 - 동아리 페이지로 바로 이동
+                    Intent intent = new Intent(MainActivityNew.this,
+                            com.example.clubmanagement.activities.ClubMainActivity.class);
+                    intent.putExtra("club_name", user.getCentralClubName());
+                    intent.putExtra("club_id", user.getCentralClubId());
+                    startActivity(intent);
+                    finish();
+                } else {
+                    // 중앙동아리 미가입 - 메인 화면 표시
+                    initViews();
+                    loadCarouselData();
+                    setupListeners();
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(ProgressBar.GONE);
+                // 오류 발생 시에도 메인 화면 표시
+                initViews();
+                loadCarouselData();
+                setupListeners();
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 중앙동아리 가입 여부를 다시 확인하여 가입된 경우 동아리 페이지로 리다이렉트
+        checkCentralClubMembershipAndRedirect();
+    }
+
+    private void checkCentralClubMembershipAndRedirect() {
+        // 로그인되지 않은 경우 스킵
+        if (firebaseManager.getCurrentUserId() == null) {
+            if (bottomNavigation != null) {
+                bottomNavigation.setSelectedItemId(R.id.nav_home);
+            }
+            return;
+        }
+
+        firebaseManager.getCurrentUser(new FirebaseManager.UserCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.User user) {
+                if (user != null && user.hasJoinedCentralClub()) {
+                    // 중앙동아리에 가입된 경우 - 동아리 페이지로 바로 이동
+                    Intent intent = new Intent(MainActivityNew.this,
+                            com.example.clubmanagement.activities.ClubMainActivity.class);
+                    intent.putExtra("club_name", user.getCentralClubName());
+                    intent.putExtra("club_id", user.getCentralClubId());
+                    // 뒤로가기 방지를 위해 태스크 스택 클리어
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                } else {
+                    // 미가입 상태 - 홈 버튼 선택 상태로 설정
+                    if (bottomNavigation != null) {
+                        bottomNavigation.setSelectedItemId(R.id.nav_home);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                // 오류 발생 시 홈 버튼 선택 상태로 설정
+                if (bottomNavigation != null) {
+                    bottomNavigation.setSelectedItemId(R.id.nav_home);
+                }
+            }
+        });
     }
 
     private void initViews() {
@@ -91,21 +183,31 @@ public class MainActivityNew extends AppCompatActivity {
 
     private List<CarouselItem> getDefaultCarouselItems() {
         List<CarouselItem> items = new ArrayList<>();
-        items.add(new CarouselItem(
-                android.R.drawable.ic_menu_camera,
+
+        // 첫 번째 캐러셀 (서명 시스템)
+        CarouselItem item1 = new CarouselItem(
+                R.drawable.carousel_image_1,  // drawable 폴더에 이미지 넣기
                 "서명 시스템",
                 "간편하게 디지털 서명을 생성하고\n문서에 자동으로 삽입하세요"
-        ));
-        items.add(new CarouselItem(
-                android.R.drawable.ic_menu_gallery,
+        );
+        items.add(item1);
+
+        // 두 번째 캐러셀 (문서 관리)
+        CarouselItem item2 = new CarouselItem(
+                R.drawable.carousel_image_2,  // drawable 폴더에 이미지 넣기
                 "문서 관리",
                 "클럽 활동 보고서부터 회의록까지\n한 곳에서 관리하세요"
-        ));
-        items.add(new CarouselItem(
-                android.R.drawable.ic_menu_edit,
+        );
+        items.add(item2);
+
+        // 세 번째 캐러셀 (부원 관리)
+        CarouselItem item3 = new CarouselItem(
+                R.drawable.carousel_image_3,  // drawable 폴더에 이미지 넣기
                 "부원 관리",
                 "부원 정보와 서명 현황을\n실시간으로 확인하세요"
-        ));
+        );
+        items.add(item3);
+
         return items;
     }
 
@@ -154,7 +256,9 @@ public class MainActivityNew extends AppCompatActivity {
                 Toast.makeText(this, "홈", Toast.LENGTH_SHORT).show();
                 return true;
             } else if (itemId == R.id.nav_clubs) {
-                Toast.makeText(this, "학과 동아리 보기", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivityNew.this,
+                        com.example.clubmanagement.activities.ClubListActivity.class);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.nav_recommend) {
                 Intent intent = new Intent(MainActivityNew.this,

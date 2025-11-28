@@ -66,6 +66,9 @@ dependencies {
     // Image Picker
     implementation("com.github.dhaval2404:imagepicker:2.1")
 
+    // ML Kit - Text Recognition (OCR for receipts)
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

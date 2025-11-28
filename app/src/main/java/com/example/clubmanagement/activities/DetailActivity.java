@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.example.clubmanagement.R;
+import com.example.clubmanagement.adapters.DetailImageAdapter;
 import com.example.clubmanagement.models.CarouselItem;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.button.MaterialButton;
@@ -29,10 +30,13 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import androidx.viewpager2.widget.ViewPager2;
 
 public class DetailActivity extends AppCompatActivity {
 
-    private ImageView ivDetailImage;
     private ImageView ivBack;
     private TextView tvDetailTitle;
     private TextView tvDetailDescription;
@@ -41,10 +45,17 @@ public class DetailActivity extends AppCompatActivity {
     private FloatingActionButton fabEdit;
     private ProgressBar progressBar;
 
+    // ViewPager2 for image carousel
+    private ViewPager2 vpDetailImages;
+    private DetailImageAdapter detailImageAdapter;
+    private LinearLayout llIndicator;
+
     private int pageIndex;
     private boolean isAdmin = false;
     private FirebaseManager firebaseManager;
     private CarouselItem currentItem;
+    private String clubName;
+    private boolean fromClubList = false;
 
     private ActivityResultLauncher<Intent> imagePickerLauncher;
 
@@ -53,20 +64,29 @@ public class DetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
-        // Intent에서 페이지 인덱스 받기
+        // Intent에서 데이터 받기
         pageIndex = getIntent().getIntExtra("page_index", 0);
+        clubName = getIntent().getStringExtra("club_name");
+        fromClubList = getIntent().getBooleanExtra("from_club_list", false);
 
         firebaseManager = FirebaseManager.getInstance();
 
         initViews();
         setupImagePickerLauncher();
         checkAdminStatus();
-        loadCarouselData();
+
+        if (fromClubList && clubName != null) {
+            // ClubListActivity에서 온 경우
+            setupClubListContent();
+        } else {
+            // 메인 화면 캐러셀에서 온 경우
+            loadCarouselData();
+        }
+
         setupListeners();
     }
 
     private void initViews() {
-        ivDetailImage = findViewById(R.id.ivDetailImage);
         ivBack = findViewById(R.id.ivBack);
         tvDetailTitle = findViewById(R.id.tvDetailTitle);
         tvDetailDescription = findViewById(R.id.tvDetailDescription);
@@ -75,9 +95,40 @@ public class DetailActivity extends AppCompatActivity {
         fabEdit = findViewById(R.id.fabEdit);
         progressBar = findViewById(R.id.progressBar);
 
+        // ViewPager2 for image carousel
+        vpDetailImages = findViewById(R.id.vpDetailImages);
+        llIndicator = findViewById(R.id.llIndicator);
+
         // Initially hide edit button
         fabEdit.setVisibility(View.GONE);
         progressBar.setVisibility(View.GONE);
+
+        // Setup default ViewPager2 adapter to prevent crash
+        setupDefaultImages();
+    }
+
+    private void setupDefaultImages() {
+        List<Object> defaultImages = new ArrayList<>();
+
+        // Add default background colors as placeholder
+        // Using drawable resource IDs or color placeholders
+        switch (pageIndex) {
+            case 0:
+                defaultImages.add(R.drawable.carousel_image_1);
+                break;
+            case 1:
+                defaultImages.add(R.drawable.carousel_image_2);
+                break;
+            case 2:
+                defaultImages.add(R.drawable.carousel_image_3);
+                break;
+            default:
+                defaultImages.add(R.drawable.carousel_image_1);
+                break;
+        }
+
+        detailImageAdapter = new DetailImageAdapter(defaultImages);
+        vpDetailImages.setAdapter(detailImageAdapter);
     }
 
     private void setupImagePickerLauncher() {
@@ -146,32 +197,14 @@ public class DetailActivity extends AppCompatActivity {
         // Set description
         tvDetailDescription.setText(item.getDescription());
 
-        // Load image
-        if (item.hasFirebaseImage()) {
-            Glide.with(this)
-                    .load(item.getImageUrl())
-                    .centerCrop()
-                    .into(ivDetailImage);
-        } else if (item.getImageRes() != 0) {
-            ivDetailImage.setImageResource(item.getImageRes());
-        } else {
-            // Set background color if available
-            if (item.getBackgroundColor() != null && !item.getBackgroundColor().isEmpty()) {
-                try {
-                    ivDetailImage.setBackgroundColor(Color.parseColor(item.getBackgroundColor()));
-                } catch (Exception e) {
-                    ivDetailImage.setBackgroundColor(getDefaultColor(pageIndex));
-                }
-            } else {
-                ivDetailImage.setBackgroundColor(getDefaultColor(pageIndex));
-            }
-        }
+        // TODO: Image loading will be implemented with ViewPager2 carousel
+        // Temporarily disabled to prevent crash
 
         // Clear and set features (keeping default for now)
         llFeatureList.removeAllViews();
         setupDefaultFeatures();
 
-        btnAction.setText("가입하기");
+        btnAction.setText("가입 신청하기");
     }
 
     private void setupDefaultContent() {
@@ -228,8 +261,8 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void setupSignatureSystemContent() {
-        // 배경색 설정
-        ivDetailImage.setBackgroundColor(0xFF6200EA); // 보라색
+        // TODO: 배경색 설정 - ViewPager2로 변경 예정
+        // ivDetailImage.setBackgroundColor(0xFF6200EA); // 보라색
 
         // 제목
         tvDetailTitle.setText("서명 시스템");
@@ -247,12 +280,12 @@ public class DetailActivity extends AppCompatActivity {
         addFeature("☁️ 클라우드 저장");
 
         // 버튼
-        btnAction.setText("가입하기");
+        btnAction.setText("가입 신청하기");
     }
 
     private void setupDocumentManagementContent() {
-        // 배경색 설정
-        ivDetailImage.setBackgroundColor(0xFF00C853); // 초록색
+        // TODO: 배경색 설정 - ViewPager2로 변경 예정
+        // ivDetailImage.setBackgroundColor(0xFF00C853); // 초록색
 
         // 제목
         tvDetailTitle.setText("문서 관리");
@@ -270,12 +303,12 @@ public class DetailActivity extends AppCompatActivity {
         addFeature("📤 문서 공유 및 저장");
 
         // 버튼
-        btnAction.setText("가입하기");
+        btnAction.setText("가입 신청하기");
     }
 
     private void setupMemberManagementContent() {
-        // 배경색 설정
-        ivDetailImage.setBackgroundColor(0xFFFF6D00); // 주황색
+        // TODO: 배경색 설정 - ViewPager2로 변경 예정
+        // ivDetailImage.setBackgroundColor(0xFFFF6D00); // 주황색
 
         // 제목
         tvDetailTitle.setText("부원 관리");
@@ -293,7 +326,7 @@ public class DetailActivity extends AppCompatActivity {
         addFeature("📈 통계 및 리포트");
 
         // 버튼
-        btnAction.setText("가입하기");
+        btnAction.setText("가입 신청하기");
     }
 
     private void addFeature(String featureText) {
@@ -316,12 +349,46 @@ public class DetailActivity extends AppCompatActivity {
         // 뒤로가기 버튼
         ivBack.setOnClickListener(v -> finish());
 
-        // 액션 버튼 - 회원가입 화면으로 이동
+        // 액션 버튼 - 회원가입 화면으로 이동 또는 일반 동아리 가입
         btnAction.setOnClickListener(v -> {
-            Intent intent = new Intent(DetailActivity.this, MemberRegistrationActivity.class);
-            String clubName = getClubName(pageIndex);
-            intent.putExtra("club_name", clubName);
-            startActivity(intent);
+            if (fromClubList) {
+                // 일반 동아리 - 바로 가입 처리
+                String clubId = getIntent().getStringExtra("club_id");
+                if (clubId == null) {
+                    Toast.makeText(this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                progressBar.setVisibility(View.VISIBLE);
+                firebaseManager.joinGeneralClub(clubId, clubName, new FirebaseManager.SimpleCallback() {
+                    @Override
+                    public void onSuccess() {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(DetailActivity.this, clubName + " 동아리에 가입되었습니다!", Toast.LENGTH_LONG).show();
+
+                        // 동아리 페이지로 이동
+                        Intent intent = new Intent(DetailActivity.this, ClubMainActivity.class);
+                        intent.putExtra("club_name", clubName);
+                        intent.putExtra("club_id", clubId);
+                        startActivity(intent);
+                        finish();
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(DetailActivity.this, "가입 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } else {
+                // 중앙 동아리 - 회원가입 화면으로 이동
+                Intent intent = new Intent(DetailActivity.this, MemberRegistrationActivity.class);
+                String clubName = getClubName(pageIndex);
+                intent.putExtra("club_name", clubName);
+                intent.putExtra("is_central_club", true);
+                intent.putExtra("central_club_id", "central_" + pageIndex);
+                startActivity(intent);
+            }
         });
 
         // 편집 버튼 (관리자만)
@@ -398,11 +465,11 @@ public class DetailActivity extends AppCompatActivity {
                     }
                     currentItem.setImageUrl(downloadUrl);
 
-                    // Display updated image
-                    Glide.with(DetailActivity.this)
-                            .load(downloadUrl)
-                            .centerCrop()
-                            .into(ivDetailImage);
+                    // TODO: Display updated image in ViewPager2
+                    // Glide.with(DetailActivity.this)
+                    //         .load(downloadUrl)
+                    //         .centerCrop()
+                    //         .into(ivDetailImage);
                 }
 
                 @Override
@@ -445,8 +512,42 @@ public class DetailActivity extends AppCompatActivity {
         });
     }
 
+    private void setupClubListContent() {
+        // 동아리 목록에서 온 경우의 콘텐츠 설정
+        tvDetailTitle.setText(clubName);
+
+        // TODO: 배경색 설정 - ViewPager2로 변경 예정
+        // 동아리 이름에 따라 다른 배경색 설정
+        // int colorIndex = Math.abs(clubName.hashCode()) % 3;
+        // int backgroundColor = getDefaultColor(colorIndex);
+        // ivDetailImage.setBackgroundColor(backgroundColor);
+
+        // 동아리 설명 (기본 템플릿)
+        String description = clubName + "에 오신 것을 환영합니다! " +
+                "우리 동아리에 가입하시려면 아래 정보를 입력해주세요.";
+        tvDetailDescription.setText(description);
+
+        // 기능 목록
+        llFeatureList.removeAllViews();
+        addFeature("📝 회원 가입 신청");
+        addFeature("✅ 관리자 승인 대기");
+        addFeature("📧 가입 완료 알림");
+        addFeature("👥 동아리 활동 시작");
+
+        // 버튼
+        btnAction.setText("가입 신청하기");
+
+        // 편집 버튼 숨김 (동아리 목록에서 온 경우)
+        fabEdit.setVisibility(View.GONE);
+    }
+
     private String getClubName(int index) {
-        // TODO: 나중에 관리자가 수정 가능하도록 변경 필요
+        // fromClubList가 true이면 전달받은 clubName 사용
+        if (fromClubList && clubName != null && !clubName.isEmpty()) {
+            return clubName;
+        }
+
+        // 메인 화면 캐러셀에서 온 경우
         switch (index) {
             case 0:
                 return "서명 시스템";

@@ -1,12 +1,15 @@
 package com.example.clubmanagement.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.clubmanagement.MainActivityNew;
 import com.example.clubmanagement.R;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 
 public class ClubRecommendActivity extends AppCompatActivity {
@@ -22,7 +25,7 @@ public class ClubRecommendActivity extends AppCompatActivity {
     private CheckBox cbAcademic;
     private CheckBox cbArt;
 
-    private MaterialButton btnShowResult;
+    private BottomNavigationView bottomNavigation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,7 +39,14 @@ public class ClubRecommendActivity extends AppCompatActivity {
         setContentView(R.layout.activity_club_recommend);
 
         initViews();
-        setupListeners();
+        setupBottomNavigation();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 화면으로 돌아올 때마다 현재 페이지 버튼 선택 상태로 설정
+        bottomNavigation.setSelectedItemId(R.id.nav_recommend);
     }
 
     private void initViews() {
@@ -50,60 +60,80 @@ public class ClubRecommendActivity extends AppCompatActivity {
         cbAcademic = findViewById(R.id.cbAcademic);
         cbArt = findViewById(R.id.cbArt);
 
-        btnShowResult = findViewById(R.id.btnShowResult);
+        bottomNavigation = findViewById(R.id.bottomNavigation);
     }
 
-    private void setupListeners() {
-        btnShowResult.setOnClickListener(v -> showRecommendationResult());
+    private void setupBottomNavigation() {
+        bottomNavigation = findViewById(R.id.bottomNavigation);
+        bottomNavigation.setOnItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+
+            if (itemId == R.id.nav_home) {
+                // 홈으로 이동 - 중앙동아리 가입 여부에 따라 다른 화면으로 이동
+                navigateToHome();
+                return true;
+            } else if (itemId == R.id.nav_clubs) {
+                // 일반 동아리 페이지로 이동
+                Intent intent = new Intent(ClubRecommendActivity.this, ClubListActivity.class);
+                startActivity(intent);
+                finish(); // 현재 페이지 종료
+                return true;
+            } else if (itemId == R.id.nav_recommend) {
+                // 현재 페이지 - 아무 동작 안함
+                return true;
+            } else if (itemId == R.id.nav_myinfo) {
+                Toast.makeText(this, "내정보", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+
+            return false;
+        });
     }
 
-    private void showRecommendationResult() {
-        // Count selected checkboxes
-        int selectedCount = 0;
-        StringBuilder selectedOptions = new StringBuilder("선택한 옵션:\n");
+    private void navigateToHome() {
+        com.example.clubmanagement.utils.FirebaseManager firebaseManager =
+            com.example.clubmanagement.utils.FirebaseManager.getInstance();
 
-        if (cbChristian.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 기독교 동아리\n");
-        }
-        if (cbLively.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 활기찬 분위기\n");
-        }
-        if (cbQuiet.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 조용한 분위기\n");
-        }
-        if (cbVolunteer.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 봉사활동\n");
-        }
-        if (cbSports.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 운동 관련\n");
-        }
-        if (cbOutdoor.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 외부 활동\n");
-        }
-        if (cbCareer.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 취업/스펙\n");
-        }
-        if (cbAcademic.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 학술/연구\n");
-        }
-        if (cbArt.isChecked()) {
-            selectedCount++;
-            selectedOptions.append("- 예술/문화\n");
+        // 로그인되지 않은 경우 바로 MainActivityNew로 이동
+        if (firebaseManager.getCurrentUserId() == null) {
+            Intent intent = new Intent(ClubRecommendActivity.this,
+                com.example.clubmanagement.MainActivityNew.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+            finish();
+            return;
         }
 
-        if (selectedCount == 0) {
-            Toast.makeText(this, "최소 1개 이상 선택해주세요", Toast.LENGTH_SHORT).show();
-        } else {
-            // TODO: 추천 로직 구현 예정
-            Toast.makeText(this, selectedCount + "개 선택됨\n추천 기능은 곧 추가됩니다", Toast.LENGTH_LONG).show();
-        }
+        firebaseManager.getCurrentUser(new com.example.clubmanagement.utils.FirebaseManager.UserCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.User user) {
+                Intent intent;
+                if (user != null && user.hasJoinedCentralClub()) {
+                    // 중앙동아리에 가입된 경우 - 동아리 메인으로 이동
+                    intent = new Intent(ClubRecommendActivity.this,
+                        com.example.clubmanagement.activities.ClubMainActivity.class);
+                    intent.putExtra("club_name", user.getCentralClubName());
+                    intent.putExtra("club_id", user.getCentralClubId());
+                } else {
+                    // 미가입 - MainActivityNew로 이동
+                    intent = new Intent(ClubRecommendActivity.this,
+                        com.example.clubmanagement.MainActivityNew.class);
+                }
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                finish();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                // 오류 발생 시 MainActivityNew로 이동
+                Intent intent = new Intent(ClubRecommendActivity.this,
+                    com.example.clubmanagement.MainActivityNew.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                finish();
+            }
+        });
     }
+
 }

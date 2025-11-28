@@ -8,7 +8,15 @@
       "Bash(ping:*)",
       "Bash(./gradlew.bat:*)",
       "Bash(cmd //c \"gradlew.bat assembleDebug\")",
-      "Bash(cmd /c \"C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement\\gradlew.bat assembleDebug\")"
+      "Bash(cmd /c \"C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement\\gradlew.bat assembleDebug\")",
+      "Bash(cmd /c \"gradlew.bat assembleDebug\")",
+      "Bash(cmd /c \"gradlew.bat assembleDebug 2>&1\")",
+      "Bash(C:UsersLGAndroidStudioProjectsClubManagementgradlew.bat assembleDebug)",
+      "Bash(cmd /c \"cd /d C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement && gradlew.bat assembleDebug\")",
+      "WebSearch",
+      "Bash(.gradlew.bat assembleDebug)",
+      "Bash(cmd.exe /c \"cd /d C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement && gradlew.bat assembleDebug\")",
+      "Bash(cmd //c:*)"
     ],
     "deny": [],
     "ask": []

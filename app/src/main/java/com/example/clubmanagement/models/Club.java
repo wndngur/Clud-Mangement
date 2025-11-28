@@ -13,6 +13,17 @@ public class Club {
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
+    // 공금 관련 필드
+    private long totalBudget;       // 총 예산 (원)
+    private long currentBudget;     // 현재 잔액 (원)
+
+    // 인원 관련 필드
+    private int memberCount;        // 현재 인원 수
+    private boolean isCentralClub;  // 중앙동아리 여부
+
+    // 중앙동아리 유지 최소 인원
+    public static final int CENTRAL_CLUB_MIN_MEMBERS = 20;
+
     // Firebase requires no-argument constructor
     public Club() {
     }
@@ -104,5 +115,76 @@ public class Club {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    // 공금 관련 Getters & Setters
+    public long getTotalBudget() {
+        return totalBudget;
+    }
+
+    public void setTotalBudget(long totalBudget) {
+        this.totalBudget = totalBudget;
+    }
+
+    public long getCurrentBudget() {
+        return currentBudget;
+    }
+
+    public void setCurrentBudget(long currentBudget) {
+        this.currentBudget = currentBudget;
+    }
+
+    // 공금 사용 비율 계산 (0.0 ~ 1.0)
+    public float getBudgetUsageRatio() {
+        if (totalBudget <= 0) return 0f;
+        return (float) currentBudget / totalBudget;
+    }
+
+    // 공금 사용 퍼센트 계산 (0 ~ 100)
+    public int getBudgetUsagePercent() {
+        return (int) (getBudgetUsageRatio() * 100);
+    }
+
+    // 인원 관련 Getters & Setters
+    public int getMemberCount() {
+        return memberCount;
+    }
+
+    public void setMemberCount(int memberCount) {
+        this.memberCount = memberCount;
+    }
+
+    public boolean isCentralClub() {
+        return isCentralClub;
+    }
+
+    public void setCentralClub(boolean centralClub) {
+        isCentralClub = centralClub;
+    }
+
+    // 중앙동아리 유지 가능 여부 (20명 이상)
+    public boolean canMaintainCentralStatus() {
+        return memberCount >= CENTRAL_CLUB_MIN_MEMBERS;
+    }
+
+    // 중앙동아리 등록까지 필요한 인원 수
+    public int getMembersNeededForCentral() {
+        if (memberCount >= CENTRAL_CLUB_MIN_MEMBERS) {
+            return 0;
+        }
+        return CENTRAL_CLUB_MIN_MEMBERS - memberCount;
+    }
+
+    // 인원 현황 비율 계산 (0.0 ~ 1.0, 최대 1.0)
+    public float getMemberRatio() {
+        if (memberCount >= CENTRAL_CLUB_MIN_MEMBERS) {
+            return 1.0f;
+        }
+        return (float) memberCount / CENTRAL_CLUB_MIN_MEMBERS;
+    }
+
+    // 인원 현황 퍼센트 계산 (0 ~ 100)
+    public int getMemberPercent() {
+        return (int) (getMemberRatio() * 100);
     }
 }

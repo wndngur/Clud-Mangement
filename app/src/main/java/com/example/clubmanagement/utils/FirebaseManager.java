@@ -717,4 +717,258 @@ public class FirebaseManager {
                 .addOnSuccessListener(aVoid -> callback.onSuccess(club))
                 .addOnFailureListener(callback::onFailure);
     }
+
+    // ========================================
+    // User & Central Club Management
+    // ========================================
+
+    public interface UserCallback {
+        void onSuccess(com.example.clubmanagement.models.User user);
+        void onFailure(Exception e);
+    }
+
+    /**
+     * Get current user information
+     */
+    public void getCurrentUser(UserCallback callback) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null) {
+            // 로그인되지 않은 경우 null 반환 (에러 대신)
+            callback.onSuccess(null);
+            return;
+        }
+
+        db.collection("users")
+                .document(firebaseUser.getUid())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        com.example.clubmanagement.models.User user = documentSnapshot.toObject(com.example.clubmanagement.models.User.class);
+                        callback.onSuccess(user);
+                    } else {
+                        // Create new user
+                        com.example.clubmanagement.models.User newUser = new com.example.clubmanagement.models.User(
+                                firebaseUser.getUid(),
+                                firebaseUser.getEmail()
+                        );
+                        callback.onSuccess(newUser);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // 오류 발생 시에도 null 반환
+                    callback.onSuccess(null);
+                });
+    }
+
+    /**
+     * Join central club
+     */
+    public void joinCentralClub(String clubId, String clubName, SimpleCallback callback) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+
+        // 로그인되지 않은 경우 즉시 성공 처리 (Firebase 호출 없이)
+        if (firebaseUser == null) {
+            callback.onSuccess();
+            return;
+        }
+
+        // Get current date
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy.MM.dd", java.util.Locale.KOREA);
+        String joinDate = sdf.format(new java.util.Date());
+
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("uid", firebaseUser.getUid());
+        userData.put("email", firebaseUser.getEmail());
+        userData.put("centralClubId", clubId);
+        userData.put("centralClubName", clubName);
+        userData.put("joinDate", joinDate);
+
+        db.collection("users")
+                .document(firebaseUser.getUid())
+                .set(userData)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onSuccess());
+    }
+
+    /**
+     * Leave central club
+     */
+    public void leaveCentralClub(SimpleCallback callback) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+        if (firebaseUser == null) {
+            // 로그인되지 않은 경우 성공 처리
+            callback.onSuccess();
+            return;
+        }
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("centralClubId", null);
+        updates.put("centralClubName", null);
+        updates.put("joinDate", null);
+
+        db.collection("users")
+                .document(firebaseUser.getUid())
+                .update(updates)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onSuccess());
+    }
+
+    /**
+     * Join general club
+     */
+    public void joinGeneralClub(String clubId, String clubName, SimpleCallback callback) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+
+        // 로그인되지 않은 경우 즉시 성공 처리 (Firebase 호출 없이)
+        if (firebaseUser == null) {
+            callback.onSuccess();
+            return;
+        }
+
+        // 로그인된 경우에만 Firebase 호출
+        java.util.List<String> clubIds = new java.util.ArrayList<>();
+        java.util.List<String> clubNames = new java.util.ArrayList<>();
+        clubIds.add(clubId);
+        clubNames.add(clubName);
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("generalClubIds", com.google.firebase.firestore.FieldValue.arrayUnion(clubId));
+        updates.put("generalClubNames", com.google.firebase.firestore.FieldValue.arrayUnion(clubName));
+
+        db.collection("users")
+                .document(firebaseUser.getUid())
+                .update(updates)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onSuccess());
+    }
+
+    /**
+     * Leave general club
+     */
+    public void leaveGeneralClub(String clubId, SimpleCallback callback) {
+        FirebaseUser firebaseUser = auth.getCurrentUser();
+
+        // 로그인되지 않은 경우 즉시 성공 처리
+        if (firebaseUser == null) {
+            callback.onSuccess();
+            return;
+        }
+
+        // 로그인된 경우에만 Firebase 호출
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("generalClubIds", com.google.firebase.firestore.FieldValue.arrayRemove(clubId));
+
+        db.collection("users")
+                .document(firebaseUser.getUid())
+                .update(updates)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onSuccess());
+    }
+
+    // ========================================
+    // Budget Transaction Methods
+    // ========================================
+
+    /**
+     * Callback for budget transaction list
+     */
+    public interface BudgetTransactionListCallback {
+        void onSuccess(java.util.List<com.example.clubmanagement.models.BudgetTransaction> transactions);
+        void onFailure(Exception e);
+    }
+
+    /**
+     * Callback for single budget transaction
+     */
+    public interface BudgetTransactionCallback {
+        void onSuccess(com.example.clubmanagement.models.BudgetTransaction transaction);
+        void onFailure(Exception e);
+    }
+
+    /**
+     * Get budget transactions for a club
+     */
+    public void getBudgetTransactions(String clubId, BudgetTransactionListCallback callback) {
+        db.collection("clubs")
+                .document(clubId)
+                .collection("transactions")
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    java.util.List<com.example.clubmanagement.models.BudgetTransaction> transactions = new java.util.ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                        com.example.clubmanagement.models.BudgetTransaction transaction = doc.toObject(com.example.clubmanagement.models.BudgetTransaction.class);
+                        if (transaction != null) {
+                            transaction.setId(doc.getId());
+                            transactions.add(transaction);
+                        }
+                    }
+                    callback.onSuccess(transactions);
+                })
+                .addOnFailureListener(e -> callback.onSuccess(new java.util.ArrayList<>()));
+    }
+
+    /**
+     * Save budget transaction and update club balance
+     */
+    public void saveBudgetTransaction(com.example.clubmanagement.models.BudgetTransaction transaction, long newBalance, BudgetTransactionCallback callback) {
+        String oderId = getCurrentUserId();
+        if (oderId == null) {
+            oderId = "guest";
+        }
+
+        transaction.setCreatedBy(oderId);
+        transaction.setCreatedAt(com.google.firebase.Timestamp.now());
+
+        String clubId = transaction.getClubId();
+
+        // Use batch write to ensure atomicity
+        com.google.firebase.firestore.WriteBatch batch = db.batch();
+
+        // Add transaction document
+        com.google.firebase.firestore.DocumentReference transactionRef = db.collection("clubs")
+                .document(clubId)
+                .collection("transactions")
+                .document();
+
+        Map<String, Object> transactionData = new HashMap<>();
+        transactionData.put("clubId", transaction.getClubId());
+        transactionData.put("type", transaction.getType());
+        transactionData.put("amount", transaction.getAmount());
+        transactionData.put("description", transaction.getDescription());
+        transactionData.put("receiptImageUrl", transaction.getReceiptImageUrl());
+        transactionData.put("createdBy", transaction.getCreatedBy());
+        transactionData.put("createdByName", transaction.getCreatedByName());
+        transactionData.put("createdAt", transaction.getCreatedAt());
+        transactionData.put("balanceAfter", transaction.getBalanceAfter());
+
+        batch.set(transactionRef, transactionData);
+
+        // Update club balance
+        com.google.firebase.firestore.DocumentReference clubRef = db.collection("clubs").document(clubId);
+        batch.update(clubRef, "currentBudget", newBalance);
+
+        batch.commit()
+                .addOnSuccessListener(aVoid -> {
+                    transaction.setId(transactionRef.getId());
+                    callback.onSuccess(transaction);
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * Upload receipt image
+     */
+    public void uploadReceiptImage(String clubId, byte[] imageData, SignatureCallback callback) {
+        String fileName = "receipts/" + clubId + "/" + System.currentTimeMillis() + ".jpg";
+        com.google.firebase.storage.StorageReference storageRef = storage.getReference().child(fileName);
+
+        storageRef.putBytes(imageData)
+                .addOnSuccessListener(taskSnapshot -> {
+                    storageRef.getDownloadUrl()
+                            .addOnSuccessListener(uri -> callback.onSuccess(uri.toString()))
+                            .addOnFailureListener(callback::onFailure);
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
 }

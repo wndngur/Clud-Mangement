@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header (Always Visible) -->
+        <LinearLayout
+            android:id="@+id/accordionHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvClubName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="동아리 이름"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"/>
+
+            <ImageView
+                android:id="@+id/ivExpandIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/arrow_down_float"
+                android:tint="@android:color/darker_gray"/>
+
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:id="@+id/divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:visibility="gone"/>
+
+        <!-- Expanded Content (Initially Hidden) -->
+        <LinearLayout
+            android:id="@+id/accordionContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvClubDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="동아리 설명이 들어갑니다."
+                android:textSize="14sp"
+                android:textColor="@android:color/darker_gray"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Member Count Progress Section -->
+            <LinearLayout
+                android:id="@+id/llMemberProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:padding="12dp"
+                android:background="@drawable/member_section_background">
+
+                <!-- Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="👥 중앙동아리 등록 현황"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black"/>
+
+                    <TextView
+                        android:id="@+id/tvMemberCountText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="15/20명"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/purple_500"/>
+
+                </LinearLayout>
+
+                <!-- Progress Bar -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="20dp"
+                    android:background="@drawable/budget_progress_background">
+
+                    <View
+                        android:id="@+id/viewMemberProgressBar"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/member_progress_fill"/>
+
+                    <TextView
+                        android:id="@+id/tvMemberProgressPercent"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="75%"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"/>
+
+                </FrameLayout>
+
+                <!-- Status Message -->
+                <TextView
+                    android:id="@+id/tvMemberStatusMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="5명 더 모집 시 중앙동아리 등록 가능!"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/holo_orange_dark"
+                    android:layout_marginTop="6dp"/>
+
+            </LinearLayout>
+
+            <!-- Join Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnJoinClub"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="가입 신청하기"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                app:backgroundTint="@color/purple_500"
+                app:icon="@android:drawable/ic_input_add"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white"
+                app:cornerRadius="28dp"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
