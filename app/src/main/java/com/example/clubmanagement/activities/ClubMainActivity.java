@@ -348,9 +348,9 @@ public class ClubMainActivity extends AppCompatActivity {
     private void deleteNotice(Notice notice) {
         progressBar.setVisibility(View.VISIBLE);
 
-        firebaseManager.deleteNotice(notice.getId(), new FirebaseManager.SignatureDataCallback() {
+        firebaseManager.deleteNotice(notice.getId(), new FirebaseManager.SimpleCallback() {
             @Override
-            public void onSuccess(com.example.clubmanagement.models.SignatureData signatureData) {
+            public void onSuccess() {
                 progressBar.setVisibility(View.GONE);
                 Toast.makeText(ClubMainActivity.this, "삭제 완료", Toast.LENGTH_SHORT).show();
                 loadNotices();
@@ -503,9 +503,9 @@ public class ClubMainActivity extends AppCompatActivity {
     private void deleteLinkButton(LinkButton linkButton) {
         progressBar.setVisibility(View.VISIBLE);
 
-        firebaseManager.deleteLinkButton(linkButton.getId(), new FirebaseManager.SignatureDataCallback() {
+        firebaseManager.deleteLinkButton(linkButton.getId(), new FirebaseManager.SimpleCallback() {
             @Override
-            public void onSuccess(com.example.clubmanagement.models.SignatureData signatureData) {
+            public void onSuccess() {
                 progressBar.setVisibility(View.GONE);
                 Toast.makeText(ClubMainActivity.this, "삭제 완료", Toast.LENGTH_SHORT).show();
                 loadLinkButtons();

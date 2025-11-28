@@ -249,6 +249,11 @@ public class FirebaseManager {
         void onFailure(Exception e);
     }
 
+    public interface SimpleCallback {
+        void onSuccess();
+        void onFailure(Exception e);
+    }
+
     /**
      * Check if current user is admin (DEPRECATED - use getUserData instead)
      */
@@ -297,13 +302,13 @@ public class FirebaseManager {
     /**
      * Set user admin level
      */
-    public void setUserAdminLevel(String userId, String adminLevel, String clubId, SignatureDataCallback callback) {
+    public void setUserAdminLevel(String userId, String adminLevel, String clubId, SimpleCallback callback) {
         com.example.clubmanagement.models.UserData userData = new com.example.clubmanagement.models.UserData(userId, adminLevel, clubId);
 
         db.collection("users")
                 .document(userId)
                 .set(userData)
-                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(callback::onFailure);
     }
 
@@ -356,14 +361,14 @@ public class FirebaseManager {
     /**
      * Set admin password (for super admin to configure)
      */
-    public void setAdminPassword(String level, String clubId, String password, SignatureDataCallback callback) {
+    public void setAdminPassword(String level, String clubId, String password, SimpleCallback callback) {
         String docId = level.equals("SUPER_ADMIN") ? "super_admin" : "club_admin_" + clubId;
         com.example.clubmanagement.models.AdminPassword adminPassword = new com.example.clubmanagement.models.AdminPassword(docId, level, password, clubId);
 
         db.collection("admin_passwords")
                 .document(docId)
                 .set(adminPassword)
-                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(callback::onFailure);
     }
 
@@ -371,7 +376,7 @@ public class FirebaseManager {
      * Set admin role for a user (DEPRECATED)
      */
     @Deprecated
-    public void setAdminRole(String userId, boolean isAdmin, SignatureDataCallback callback) {
+    public void setAdminRole(String userId, boolean isAdmin, SimpleCallback callback) {
         String adminLevel = isAdmin ? "SUPER_ADMIN" : "NONE";
         setUserAdminLevel(userId, adminLevel, null, callback);
     }
@@ -468,11 +473,11 @@ public class FirebaseManager {
     /**
      * Delete carousel item
      */
-    public void deleteCarouselItem(String itemId, SignatureDataCallback callback) {
+    public void deleteCarouselItem(String itemId, SimpleCallback callback) {
         db.collection("carousel_items")
                 .document(itemId)
                 .delete()
-                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(callback::onFailure);
     }
 
@@ -536,11 +541,11 @@ public class FirebaseManager {
     /**
      * Delete notice
      */
-    public void deleteNotice(String noticeId, SignatureDataCallback callback) {
+    public void deleteNotice(String noticeId, SimpleCallback callback) {
         db.collection("notices")
                 .document(noticeId)
                 .delete()
-                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(callback::onFailure);
     }
 
@@ -657,11 +662,11 @@ public class FirebaseManager {
     /**
      * Delete link button
      */
-    public void deleteLinkButton(String linkButtonId, SignatureDataCallback callback) {
+    public void deleteLinkButton(String linkButtonId, SimpleCallback callback) {
         db.collection("link_buttons")
                 .document(linkButtonId)
                 .delete()
-                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(callback::onFailure);
     }
 }

@@ -130,9 +130,9 @@ public class SettingsActivity extends AppCompatActivity {
     private void setUserAdminLevel(String adminLevel, String clubId) {
         String userId = firebaseManager.getCurrentUserId();
 
-        firebaseManager.setUserAdminLevel(userId, adminLevel, clubId, new FirebaseManager.SignatureDataCallback() {
+        firebaseManager.setUserAdminLevel(userId, adminLevel, clubId, new FirebaseManager.SimpleCallback() {
             @Override
-            public void onSuccess(com.example.clubmanagement.models.SignatureData signatureData) {
+            public void onSuccess() {
                 progressBar.setVisibility(ProgressBar.GONE);
 
                 String message = adminLevel.equals("SUPER_ADMIN")
@@ -157,9 +157,9 @@ public class SettingsActivity extends AppCompatActivity {
                 .setMessage("관리자 권한을 해제하시겠습니까?")
                 .setPositiveButton("해제", (dialog, which) -> {
                     String userId = firebaseManager.getCurrentUserId();
-                    firebaseManager.setUserAdminLevel(userId, "NONE", null, new FirebaseManager.SignatureDataCallback() {
+                    firebaseManager.setUserAdminLevel(userId, "NONE", null, new FirebaseManager.SimpleCallback() {
                         @Override
-                        public void onSuccess(com.example.clubmanagement.models.SignatureData signatureData) {
+                        public void onSuccess() {
                             Toast.makeText(SettingsActivity.this, "관리자 권한이 해제되었습니다", Toast.LENGTH_SHORT).show();
                             loadAdminStatus();
                         }
