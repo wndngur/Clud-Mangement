@@ -669,4 +669,52 @@ public class FirebaseManager {
                 .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(callback::onFailure);
     }
+
+    // ========================================
+    // Club Methods
+    // ========================================
+
+    public interface ClubCallback {
+        void onSuccess(com.example.clubmanagement.models.Club club);
+        void onFailure(Exception e);
+    }
+
+    /**
+     * Get club information by ID
+     */
+    public void getClub(String clubId, ClubCallback callback) {
+        db.collection("clubs")
+                .document(clubId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        com.example.clubmanagement.models.Club club = documentSnapshot.toObject(com.example.clubmanagement.models.Club.class);
+                        callback.onSuccess(club);
+                    } else {
+                        callback.onSuccess(null);
+                    }
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * Save or update club information
+     */
+    public void saveClub(com.example.clubmanagement.models.Club club, ClubCallback callback) {
+        if (club.getId() == null || club.getId().isEmpty()) {
+            callback.onFailure(new Exception("Club ID cannot be null or empty"));
+            return;
+        }
+
+        club.setUpdatedAt(Timestamp.now());
+        if (club.getCreatedAt() == null) {
+            club.setCreatedAt(Timestamp.now());
+        }
+
+        db.collection("clubs")
+                .document(club.getId())
+                .set(club)
+                .addOnSuccessListener(aVoid -> callback.onSuccess(club))
+                .addOnFailureListener(callback::onFailure);
+    }
 }

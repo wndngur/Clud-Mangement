@@ -40,6 +40,7 @@ public class ClubMainActivity extends AppCompatActivity {
 
     // UI Components
     private TextView tvClubName;
+    private ImageView ivEditClubName;
     private ImageView ivSettings;
     private LinearLayout llNoticesContainer;
     private LinearLayout llLinkButtonsContainer;
@@ -56,6 +57,7 @@ public class ClubMainActivity extends AppCompatActivity {
     private List<LinkButton> linkButtons;
     private Banner currentBanner;
     private String clubName;
+    private com.example.clubmanagement.models.Club currentClub;
 
     private ActivityResultLauncher<Intent> bannerImagePickerLauncher;
 
@@ -87,6 +89,7 @@ public class ClubMainActivity extends AppCompatActivity {
 
     private void initViews() {
         tvClubName = findViewById(R.id.tvClubName);
+        ivEditClubName = findViewById(R.id.ivEditClubName);
         ivSettings = findViewById(R.id.ivSettings);
         llNoticesContainer = findViewById(R.id.llNoticesContainer);
         llLinkButtonsContainer = findViewById(R.id.llLinkButtonsContainer);
@@ -131,6 +134,7 @@ public class ClubMainActivity extends AppCompatActivity {
                     isAdmin = isSuperAdmin || isThisClubAdmin;
 
                     if (isAdmin) {
+                        ivEditClubName.setVisibility(View.VISIBLE);
                         btnAddNotice.setVisibility(View.VISIBLE);
                         btnAddLink.setVisibility(View.VISIBLE);
                         ivEditBanner.setVisibility(View.VISIBLE);
@@ -152,6 +156,7 @@ public class ClubMainActivity extends AppCompatActivity {
     }
 
     private void loadAllData() {
+        loadClubInfo();
         loadNotices();
         loadLinkButtons();
         loadBanner();
@@ -159,6 +164,14 @@ public class ClubMainActivity extends AppCompatActivity {
 
     private void setupListeners() {
         ivSettings.setOnClickListener(v -> openClubSettings());
+
+        // Edit club name on click (admin only)
+        tvClubName.setOnClickListener(v -> {
+            if (isAdmin) {
+                showEditClubNameDialog();
+            }
+        });
+        ivEditClubName.setOnClickListener(v -> showEditClubNameDialog());
 
         btnAddNotice.setOnClickListener(v -> showAddNoticeDialog());
         btnAddLink.setOnClickListener(v -> showAddLinkButtonDialog());
@@ -654,6 +667,82 @@ public class ClubMainActivity extends AppCompatActivity {
                 Toast.makeText(ClubMainActivity.this, "저장 완료", Toast.LENGTH_SHORT).show();
                 currentBanner = banner;
                 displayBanner();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(ClubMainActivity.this, "저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // ========================================
+    // Club Name Methods
+    // ========================================
+
+    private void loadClubInfo() {
+        String clubId = getClubId();
+
+        firebaseManager.getClub(clubId, new FirebaseManager.ClubCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.Club club) {
+                if (club != null) {
+                    currentClub = club;
+                    clubName = club.getName();
+                    tvClubName.setText(clubName);
+                } else {
+                    // Club doesn't exist yet, create it with current name
+                    currentClub = new com.example.clubmanagement.models.Club(clubId, clubName);
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                Toast.makeText(ClubMainActivity.this, "동아리 정보 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showEditClubNameDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_club_name, null);
+        EditText etClubName = dialogView.findViewById(R.id.etClubName);
+
+        etClubName.setText(clubName);
+        etClubName.setSelection(clubName.length());
+
+        new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("저장", (dialog, which) -> {
+                    String newClubName = etClubName.getText().toString().trim();
+                    if (!newClubName.isEmpty()) {
+                        saveClubName(newClubName);
+                    } else {
+                        Toast.makeText(this, "동아리명을 입력해주세요", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    private void saveClubName(String newClubName) {
+        progressBar.setVisibility(View.VISIBLE);
+
+        String clubId = getClubId();
+        if (currentClub == null) {
+            currentClub = new com.example.clubmanagement.models.Club(clubId, newClubName);
+        } else {
+            currentClub.setName(newClubName);
+        }
+
+        firebaseManager.saveClub(currentClub, new FirebaseManager.ClubCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.Club club) {
+                progressBar.setVisibility(View.GONE);
+                clubName = newClubName;
+                currentClub = club;
+                tvClubName.setText(clubName);
+                Toast.makeText(ClubMainActivity.this, "동아리명이 변경되었습니다", Toast.LENGTH_SHORT).show();
             }
 
             @Override
