@@ -150,17 +150,19 @@ public class MainActivityNew extends AppCompatActivity {
         bottomNavigation.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
 
-            if (itemId == R.id.nav_button1) {
-                Toast.makeText(this, "버튼1 클릭", Toast.LENGTH_SHORT).show();
+            if (itemId == R.id.nav_home) {
+                Toast.makeText(this, "홈", Toast.LENGTH_SHORT).show();
                 return true;
-            } else if (itemId == R.id.nav_button2) {
-                Toast.makeText(this, "버튼2 클릭", Toast.LENGTH_SHORT).show();
+            } else if (itemId == R.id.nav_clubs) {
+                Toast.makeText(this, "학과 동아리 보기", Toast.LENGTH_SHORT).show();
                 return true;
-            } else if (itemId == R.id.nav_button3) {
-                Toast.makeText(this, "버튼3 클릭", Toast.LENGTH_SHORT).show();
+            } else if (itemId == R.id.nav_recommend) {
+                Intent intent = new Intent(MainActivityNew.this,
+                        com.example.clubmanagement.activities.ClubRecommendActivity.class);
+                startActivity(intent);
                 return true;
-            } else if (itemId == R.id.nav_button4) {
-                Toast.makeText(this, "버튼4 클릭", Toast.LENGTH_SHORT).show();
+            } else if (itemId == R.id.nav_myinfo) {
+                Toast.makeText(this, "내정보", Toast.LENGTH_SHORT).show();
                 return true;
             }
 

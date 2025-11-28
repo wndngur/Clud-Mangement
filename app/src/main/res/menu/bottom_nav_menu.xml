@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/nav_button1"
-        android:icon="@android:drawable/ic_menu_view"
-        android:title="버튼1"/>
+        android:id="@+id/nav_home"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="홈"/>
 
     <item
-        android:id="@+id/nav_button2"
-        android:icon="@android:drawable/ic_menu_edit"
-        android:title="버튼2"/>
+        android:id="@+id/nav_clubs"
+        android:icon="@android:drawable/ic_menu_info_details"
+        android:title="학과 동아리 보기"/>
 
     <item
-        android:id="@+id/nav_button3"
-        android:icon="@android:drawable/ic_menu_add"
-        android:title="버튼3"/>
+        android:id="@+id/nav_recommend"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="동아리 추천"/>
 
     <item
-        android:id="@+id/nav_button4"
-        android:icon="@android:drawable/ic_menu_gallery"
-        android:title="버튼4"/>
+        android:id="@+id/nav_myinfo"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="내정보"/>
 </menu>

@@ -46,6 +46,7 @@ public class ClubMainActivity extends AppCompatActivity {
     private LinearLayout llLinkButtonsContainer;
     private MaterialButton btnAddNotice;
     private MaterialButton btnAddLink;
+    private MaterialButton btnClubInfo;
     private ImageView ivEditBanner;
     private ImageView ivBannerImage;
     private TextView tvBannerTitle;
@@ -95,6 +96,7 @@ public class ClubMainActivity extends AppCompatActivity {
         llLinkButtonsContainer = findViewById(R.id.llLinkButtonsContainer);
         btnAddNotice = findViewById(R.id.btnAddNotice);
         btnAddLink = findViewById(R.id.btnAddLink);
+        btnClubInfo = findViewById(R.id.btnClubInfo);
         ivEditBanner = findViewById(R.id.ivEditBanner);
         ivBannerImage = findViewById(R.id.ivBannerImage);
         tvBannerTitle = findViewById(R.id.tvBannerTitle);
@@ -176,12 +178,20 @@ public class ClubMainActivity extends AppCompatActivity {
         btnAddNotice.setOnClickListener(v -> showAddNoticeDialog());
         btnAddLink.setOnClickListener(v -> showAddLinkButtonDialog());
         ivEditBanner.setOnClickListener(v -> showEditBannerDialog());
+        btnClubInfo.setOnClickListener(v -> openClubInfo());
     }
 
     private void openClubSettings() {
         Intent intent = new Intent(ClubMainActivity.this, ClubSettingsActivity.class);
         intent.putExtra("club_name", clubName);
         intent.putExtra("club_id", getClubId());
+        startActivity(intent);
+    }
+
+    private void openClubInfo() {
+        Intent intent = new Intent(ClubMainActivity.this, ClubInfoActivity.class);
+        intent.putExtra("club_id", getClubId());
+        intent.putExtra("club_name", clubName);
         startActivity(intent);
     }
 

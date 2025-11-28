@@ -6,6 +6,10 @@ public class Club {
     private String id;              // Club ID (unique identifier)
     private String name;            // Club name (동아리명)
     private String description;     // Club description
+    private String purpose;         // 설립 목적
+    private String schedule;        // 행사 일정
+    private String members;         // 부원 명단
+    private String location;        // 동아리방 위치
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
@@ -49,6 +53,22 @@ public class Club {
         return updatedAt;
     }
 
+    public String getPurpose() {
+        return purpose;
+    }
+
+    public String getSchedule() {
+        return schedule;
+    }
+
+    public String getMembers() {
+        return members;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
     // Setters
     public void setId(String id) {
         this.id = id;
@@ -60,6 +80,22 @@ public class Club {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public void setPurpose(String purpose) {
+        this.purpose = purpose;
+    }
+
+    public void setSchedule(String schedule) {
+        this.schedule = schedule;
+    }
+
+    public void setMembers(String members) {
+        this.members = members;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public void setCreatedAt(Timestamp createdAt) {

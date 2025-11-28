@@ -63,6 +63,19 @@
             android:exported="false"
             android:label="동아리 메인"/>
 
+        <!-- Club Info Activity -->
+        <activity
+            android:name=".activities.ClubInfoActivity"
+            android:exported="false"
+            android:label="동아리 정보"
+            android:parentActivityName=".activities.ClubMainActivity"/>
+
+        <!-- Club Recommend Activity -->
+        <activity
+            android:name=".activities.ClubRecommendActivity"
+            android:exported="false"
+            android:label="동아리 추천"/>
+
         <!-- Old Main Activity (Backup) -->
         <activity
             android:name=".MainActivity"
