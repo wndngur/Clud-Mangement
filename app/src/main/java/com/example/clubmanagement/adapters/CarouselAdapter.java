@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -44,23 +43,16 @@ public class CarouselAdapter extends RecyclerView.Adapter<CarouselAdapter.Carous
     }
 
     static class CarouselViewHolder extends RecyclerView.ViewHolder {
-        private ImageView ivCarouselImage;
         private ImageView ivCarouselBackground;
-        private TextView tvCarouselTitle;
-        private TextView tvCarouselDescription;
 
         public CarouselViewHolder(@NonNull View itemView) {
             super(itemView);
-            ivCarouselImage = itemView.findViewById(R.id.ivCarouselImage);
             ivCarouselBackground = itemView.findViewById(R.id.ivCarouselBackground);
-            tvCarouselTitle = itemView.findViewById(R.id.tvCarouselTitle);
-            tvCarouselDescription = itemView.findViewById(R.id.tvCarouselDescription);
         }
 
         public void bind(CarouselItem item, int position) {
-            // Set title and description
-            tvCarouselTitle.setText(item.getTitle());
-            tvCarouselDescription.setText(item.getDescription());
+            // 기본 배경색 먼저 설정 (이미지 로드 실패 시를 대비)
+            ivCarouselBackground.setBackgroundColor(getDefaultColor(position));
 
             // Load background image from Firebase URL or local resource
             if (item.hasFirebaseImage()) {
@@ -68,26 +60,18 @@ public class CarouselAdapter extends RecyclerView.Adapter<CarouselAdapter.Carous
                 Glide.with(itemView.getContext())
                         .load(item.getImageUrl())
                         .centerCrop()
+                        .placeholder(new android.graphics.drawable.ColorDrawable(getDefaultColor(position)))
+                        .error(new android.graphics.drawable.ColorDrawable(getDefaultColor(position)))
                         .into(ivCarouselBackground);
-                ivCarouselBackground.setVisibility(View.VISIBLE);
-
-                // Hide icon
-                ivCarouselImage.setVisibility(View.GONE);
             } else if (item.getImageRes() != 0) {
                 // Load background from local drawable resource
                 Glide.with(itemView.getContext())
                         .load(item.getImageRes())
                         .centerCrop()
+                        .placeholder(new android.graphics.drawable.ColorDrawable(getDefaultColor(position)))
+                        .error(new android.graphics.drawable.ColorDrawable(getDefaultColor(position)))
                         .into(ivCarouselBackground);
-                ivCarouselBackground.setVisibility(View.VISIBLE);
-
-                // Hide icon
-                ivCarouselImage.setVisibility(View.GONE);
             } else {
-                // Show colored background if no image
-                ivCarouselImage.setVisibility(View.GONE);
-                ivCarouselBackground.setVisibility(View.VISIBLE);
-
                 // Use custom background color or default
                 if (item.getBackgroundColor() != null && !item.getBackgroundColor().isEmpty()) {
                     try {
@@ -95,8 +79,6 @@ public class CarouselAdapter extends RecyclerView.Adapter<CarouselAdapter.Carous
                     } catch (Exception e) {
                         ivCarouselBackground.setBackgroundColor(getDefaultColor(position));
                     }
-                } else {
-                    ivCarouselBackground.setBackgroundColor(getDefaultColor(position));
                 }
             }
         }

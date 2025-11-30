@@ -12,101 +12,129 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <!-- Type Icon -->
-        <TextView
-            android:id="@+id/tvTypeIcon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:gravity="center"
-            android:textSize="20sp"
-            android:background="@drawable/budget_progress_background"
-            android:text="💸"/>
-
-        <!-- Transaction Info -->
+        <!-- Main Content Row -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
+            <!-- Type Icon -->
             <TextView
-                android:id="@+id/tvDescription"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="지출 내역"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/black"
-                android:maxLines="1"
-                android:ellipsize="end"/>
+                android:id="@+id/tvTypeIcon"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:textSize="20sp"
+                android:background="@drawable/budget_progress_background"
+                android:text="💸"/>
 
+            <!-- Transaction Info -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvDescription"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="지출 내역"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="2dp">
+
+                    <TextView
+                        android:id="@+id/tvDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2024.01.01 12:00"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/darker_gray"/>
+
+                    <TextView
+                        android:id="@+id/tvCreatedBy"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" · 홍길동"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/darker_gray"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Amount -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="2dp">
+                android:orientation="vertical"
+                android:gravity="end">
 
                 <TextView
-                    android:id="@+id/tvDate"
+                    android:id="@+id/tvAmount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="2024.01.01 12:00"
-                    android:textSize="12sp"
-                    android:textColor="@android:color/darker_gray"/>
+                    android:text="-10,000원"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_red_dark"/>
 
                 <TextView
-                    android:id="@+id/tvCreatedBy"
+                    android:id="@+id/tvBalanceAfter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text=" · 홍길동"
-                    android:textSize="12sp"
+                    android:text="잔액: 490,000원"
+                    android:textSize="11sp"
                     android:textColor="@android:color/darker_gray"/>
 
             </LinearLayout>
 
+            <!-- Receipt indicator (small icon) -->
+            <ImageView
+                android:id="@+id/ivReceiptIndicator"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                android:src="@android:drawable/ic_menu_camera"
+                android:contentDescription="영수증"
+                android:visibility="gone"
+                app:tint="@android:color/darker_gray"/>
+
         </LinearLayout>
 
-        <!-- Amount -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <!-- Receipt Image Thumbnail (expanded view) -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardReceiptThumbnail"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="end">
-
-            <TextView
-                android:id="@+id/tvAmount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="-10,000원"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/holo_red_dark"/>
-
-            <TextView
-                android:id="@+id/tvBalanceAfter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="잔액: 490,000원"
-                android:textSize="11sp"
-                android:textColor="@android:color/darker_gray"/>
-
-        </LinearLayout>
-
-        <!-- Receipt indicator -->
-        <ImageView
-            android:id="@+id/ivReceiptIndicator"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="8dp"
-            android:src="@android:drawable/ic_menu_camera"
-            android:contentDescription="영수증"
+            android:layout_marginTop="12dp"
             android:visibility="gone"
-            app:tint="@android:color/darker_gray"/>
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#F5F5F5">
+
+            <ImageView
+                android:id="@+id/ivReceiptThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:scaleType="centerCrop"
+                android:contentDescription="영수증 이미지"/>
+
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 

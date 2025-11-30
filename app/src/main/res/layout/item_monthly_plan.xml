@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="top"
+    android:layout_marginBottom="8dp">
+
+    <TextView
+        android:id="@+id/tvMonthLabel"
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:text="1월"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginTop="12dp" />
+
+    <EditText
+        android:id="@+id/etPlan"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:minHeight="80dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:background="@drawable/edit_text_border"
+        android:hint="활동 내용을 입력하세요\n(여러 줄 입력 가능)"
+        android:textSize="13sp"
+        android:inputType="textMultiLine"
+        android:gravity="top|start"
+        android:scrollbars="vertical"
+        android:maxLines="5" />
+
+    <EditText
+        android:id="@+id/etBudget"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:minHeight="80dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="@drawable/edit_text_border"
+        android:hint="금액"
+        android:textSize="13sp"
+        android:inputType="number"
+        android:gravity="center" />
+
+</LinearLayout>

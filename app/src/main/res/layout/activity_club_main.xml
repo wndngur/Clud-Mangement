@@ -10,40 +10,46 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
+        android:layout_height="56dp"
         android:background="@android:color/white"
         android:elevation="4dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Join Date (Left Top) -->
-        <TextView
-            android:id="@+id/tvJoinDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:text="가입일: 2024.01.01"
-            android:textSize="12sp"
-            android:textColor="@android:color/darker_gray"
+        <!-- Home Button (홈으로 가기) -->
+        <ImageView
+            android:id="@+id/ivHome"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="12dp"
+            android:src="@android:drawable/ic_menu_revert"
+            android:contentDescription="홈으로 가기"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@android:color/black"
+            android:visibility="visible"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"/>
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginStart="4dp"/>
 
-        <!-- Club Name -->
+        <!-- Club Name (Center) -->
         <TextView
             android:id="@+id/tvClubName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="4dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:text="동아리 이름"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="@android:color/black"
+            android:gravity="center"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivHome"
             app:layout_constraintEnd_toStartOf="@id/ivEditClubName"/>
 
         <!-- Edit Club Name Icon (Admin Only) -->
@@ -51,31 +57,67 @@
             android:id="@+id/ivEditClubName"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="4dp"
             android:padding="6dp"
             android:src="@android:drawable/ic_menu_edit"
             android:contentDescription="동아리명 편집"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/darker_gray"
+            app:tint="@android:color/darker_gray"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tvAdminModeIndicator"/>
+
+        <!-- Admin Mode Indicator -->
+        <TextView
+            android:id="@+id/tvAdminModeIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="관리자"
+            android:textSize="10sp"
+            android:textColor="@android:color/white"
+            android:background="@drawable/badge_admin_mode"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:layout_marginEnd="4dp"
             android:visibility="gone"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/ivSettings"/>
 
-        <!-- Settings Icon -->
+        <!-- Settings Icon (항상 표시) -->
         <ImageView
             android:id="@+id/ivSettings"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="4dp"
             android:padding="12dp"
             android:src="@android:drawable/ic_menu_manage"
             android:contentDescription="설정"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/black"
+            app:tint="@android:color/black"
+            android:visibility="visible"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
+
+        <!-- Join Date (Hidden - moved to club info) -->
+        <TextView
+            android:id="@+id/tvJoinDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <!-- Back Button (Hidden - replaced by ivHome) -->
+        <ImageView
+            android:id="@+id/ivBack"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -93,6 +135,207 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
+
+            <!-- Calendar Section -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardCalendar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Calendar Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="📅 일정 관리"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@android:color/black"/>
+
+                        <!-- Add Schedule Button (Admin Only) -->
+                        <ImageView
+                            android:id="@+id/ivAddSchedule"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:padding="6dp"
+                            android:src="@android:drawable/ic_menu_add"
+                            android:contentDescription="일정 추가"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:visibility="gone"/>
+
+                    </LinearLayout>
+
+                    <!-- Month Navigation -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:id="@+id/ivPrevMonth"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:padding="8dp"
+                            android:src="@android:drawable/ic_media_previous"
+                            android:contentDescription="이전 달"
+                            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+                        <TextView
+                            android:id="@+id/tvCurrentMonth"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="2024년 12월"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@android:color/black"
+                            android:gravity="center"/>
+
+                        <ImageView
+                            android:id="@+id/ivNextMonth"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:padding="8dp"
+                            android:src="@android:drawable/ic_media_next"
+                            android:contentDescription="다음 달"
+                            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+                    </LinearLayout>
+
+                    <!-- Day of Week Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="4dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="일"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/holo_red_light"
+                            android:gravity="center"/>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="월"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/darker_gray"
+                            android:gravity="center"/>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="화"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/darker_gray"
+                            android:gravity="center"/>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="수"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/darker_gray"
+                            android:gravity="center"/>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="목"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/darker_gray"
+                            android:gravity="center"/>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="금"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/darker_gray"
+                            android:gravity="center"/>
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="토"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/holo_blue_light"
+                            android:gravity="center"/>
+
+                    </LinearLayout>
+
+                    <!-- Calendar Grid (6 rows x 48dp each = 288dp) -->
+                    <GridView
+                        android:id="@+id/gridCalendar"
+                        android:layout_width="match_parent"
+                        android:layout_height="288dp"
+                        android:numColumns="7"
+                        android:verticalSpacing="2dp"
+                        android:horizontalSpacing="2dp"
+                        android:stretchMode="columnWidth"
+                        android:gravity="center"
+                        android:scrollbars="none"/>
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#E0E0E0"
+                        android:layout_marginVertical="12dp"/>
+
+                    <!-- D-day Section -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="다가오는 일정"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black"
+                        android:layout_marginBottom="8dp"/>
+
+                    <!-- D-day List Container -->
+                    <LinearLayout
+                        android:id="@+id/llDdayContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <!-- D-day items will be added dynamically -->
+                        <TextView
+                            android:id="@+id/tvNoSchedule"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="등록된 일정이 없습니다"
+                            android:textSize="13sp"
+                            android:textColor="@android:color/darker_gray"
+                            android:gravity="center"
+                            android:padding="16dp"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
 
             <!-- Budget Section (clickable to view details) -->
             <androidx.cardview.widget.CardView
@@ -505,30 +748,39 @@
                     </FrameLayout>
 
                     <!-- Member Status Message -->
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/tvMemberStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="8dp">
+                        android:text="5명 더 필요합니다"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/holo_orange_dark"
+                        android:layout_marginTop="8dp"/>
 
-                        <TextView
-                            android:id="@+id/tvMemberStatus"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="5명 더 필요합니다"
-                            android:textSize="12sp"
-                            android:textColor="@android:color/holo_orange_dark"/>
+                    <!-- 관리자용 부원 관리 텍스트 -->
+                    <TextView
+                        android:id="@+id/tvMemberManage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="부원 관리 >"
+                        android:textSize="12sp"
+                        android:textColor="@color/purple_500"
+                        android:layout_marginTop="8dp"
+                        android:layout_gravity="end"
+                        android:visibility="gone"/>
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="부원 관리 >"
-                            android:textSize="12sp"
-                            android:textColor="@color/purple_500"/>
-
-                    </LinearLayout>
+                    <!-- 일반 사용자용 부원 명단 보기 버튼 -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMemberList"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:text="부원 명단 보기"
+                        android:textSize="14sp"
+                        android:layout_marginTop="12dp"
+                        app:icon="@android:drawable/ic_menu_myplaces"
+                        app:iconGravity="textStart"
+                        android:visibility="visible"/>
 
                 </LinearLayout>
 
@@ -554,7 +806,7 @@
                 <!-- Add Notice Button (Admin Only) -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnAddNotice"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
                     android:text="추가"
@@ -574,153 +826,22 @@
                 <!-- Accordion items will be added dynamically -->
             </LinearLayout>
 
-            <!-- Link Buttons Section Header -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🔗 바로가기"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/black"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp"/>
-
-            <!-- Link Buttons Container -->
-            <LinearLayout
-                android:id="@+id/llLinkButtonsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center">
-                <!-- Link buttons will be added dynamically -->
-            </LinearLayout>
-
-            <!-- Add Link Button (Admin Only) -->
+            <!-- Club Notice Button -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAddLink"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="+ 링크 추가"
-                android:visibility="gone"/>
-
-            <!-- Temporary Buttons Below Link Buttons -->
-            <LinearLayout
+                android:id="@+id/btnClubNotice"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp"
-                android:gravity="center">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTemp1"
-                    android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="임시버튼 1"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/purple_500"
-                    app:cornerRadius="12dp"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTemp2"
-                    android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:text="임시버튼 2"
-                    android:textSize="14sp"
-                    app:backgroundTint="@color/purple_500"
-                    app:cornerRadius="12dp"/>
-
-            </LinearLayout>
-
-            <!-- Banner Section Header -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="🎉 배너"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/black"/>
-
-                <!-- Edit Banner Button (Admin Only) -->
-                <ImageView
-                    android:id="@+id/ivEditBanner"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:padding="6dp"
-                    android:src="@android:drawable/ic_menu_edit"
-                    android:contentDescription="배너 편집"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:visibility="gone"/>
-
-            </LinearLayout>
-
-            <!-- Banner Card -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/cardBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                android:layout_marginBottom="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <!-- Banner Image -->
-                    <ImageView
-                        android:id="@+id/ivBannerImage"
-                        android:layout_width="match_parent"
-                        android:layout_height="200dp"
-                        android:scaleType="centerCrop"
-                        android:background="#E0E0E0"
-                        android:contentDescription="배너 이미지"/>
-
-                    <!-- Banner Content -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="16dp">
-
-                        <TextView
-                            android:id="@+id/tvBannerTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="배너 제목"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@android:color/black"/>
-
-                        <TextView
-                            android:id="@+id/tvBannerDescription"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="배너 설명이 들어갑니다."
-                            android:textSize="14sp"
-                            android:textColor="@android:color/darker_gray"
-                            android:layout_marginTop="4dp"/>
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
+                android:layout_height="56dp"
+                android:text="동아리 공지사항"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                app:backgroundTint="#FF5722"
+                app:icon="@android:drawable/ic_dialog_email"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white"
+                app:cornerRadius="28dp"
+                android:elevation="4dp"
+                android:layout_marginBottom="12dp"/>
 
             <!-- Club Info Button -->
             <com.google.android.material.button.MaterialButton
@@ -736,7 +857,94 @@
                 app:iconGravity="textStart"
                 app:iconTint="@color/white"
                 app:cornerRadius="28dp"
-                android:elevation="4dp"/>
+                android:elevation="4dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Banner Section Header (최하단) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="🎉 배너"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black"/>
+
+                <!-- Banner Speed Setting (Admin Only) -->
+                <ImageView
+                    android:id="@+id/ivBannerSpeed"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="6dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    android:contentDescription="배너 속도 설정"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:visibility="gone"/>
+
+                <!-- Add Banner Button (Admin Only) -->
+                <ImageView
+                    android:id="@+id/ivAddBanner"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="6dp"
+                    android:src="@android:drawable/ic_menu_add"
+                    android:contentDescription="배너 추가"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:visibility="gone"/>
+
+                <!-- Edit Banner Button (Admin Only) -->
+                <ImageView
+                    android:id="@+id/ivEditBanner"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="6dp"
+                    android:src="@android:drawable/ic_menu_edit"
+                    android:contentDescription="배너 편집"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:visibility="gone"/>
+
+            </LinearLayout>
+
+            <!-- Banner ViewPager2 with Indicator -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Banner ViewPager2 -->
+                    <androidx.viewpager2.widget.ViewPager2
+                        android:id="@+id/vpBanners"
+                        android:layout_width="match_parent"
+                        android:layout_height="280dp"/>
+
+                    <!-- Banner Indicator Dots -->
+                    <LinearLayout
+                        android:id="@+id/layoutIndicator"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:paddingVertical="8dp"/>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
 
         </LinearLayout>
 

@@ -8,6 +8,7 @@ public class Banner {
     private String title;
     private String description;
     private String linkUrl;      // Optional external link
+    private int position;        // Order position for multiple banners
     private Timestamp updatedAt;
 
     // Firebase requires no-argument constructor
@@ -20,6 +21,17 @@ public class Banner {
         this.title = title;
         this.description = description;
         this.linkUrl = linkUrl;
+        this.position = 0;
+        this.updatedAt = Timestamp.now();
+    }
+
+    public Banner(String id, String imageUrl, String title, String description, String linkUrl, int position) {
+        this.id = id;
+        this.imageUrl = imageUrl;
+        this.title = title;
+        this.description = description;
+        this.linkUrl = linkUrl;
+        this.position = position;
         this.updatedAt = Timestamp.now();
     }
 
@@ -48,6 +60,10 @@ public class Banner {
         return updatedAt;
     }
 
+    public int getPosition() {
+        return position;
+    }
+
     // Setters
     public void setId(String id) {
         this.id = id;
@@ -71,5 +87,9 @@ public class Banner {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
     }
 }

@@ -40,6 +40,11 @@ public class DetailImageAdapter extends RecyclerView.Adapter<DetailImageAdapter.
         return images.size();
     }
 
+    public void updateImages(List<Object> newImages) {
+        this.images = newImages;
+        notifyDataSetChanged();
+    }
+
     static class ImageViewHolder extends RecyclerView.ViewHolder {
         private ImageView ivImage;
 

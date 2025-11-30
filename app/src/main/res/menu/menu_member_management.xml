@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_members"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="동아리원"/>
+
+    <item
+        android:id="@+id/nav_join_requests"
+        android:icon="@android:drawable/ic_menu_add"
+        android:title="가입신청"/>
+
+    <item
+        android:id="@+id/nav_leave_requests"
+        android:icon="@android:drawable/ic_menu_close_clear_cancel"
+        android:title="탈퇴요청"/>
+
+</menu>

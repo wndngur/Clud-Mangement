@@ -4,14 +4,19 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.utils.FirebaseManager;
@@ -27,11 +32,15 @@ public class MemberRegistrationActivity extends AppCompatActivity {
     private TextInputEditText etStudentId;
     private TextInputEditText etPhone;
     private TextInputEditText etEmail;
+    private Spinner spinnerBirthMonth;
+    private Spinner spinnerBirthDay;
     private CheckBox cbPrivacyAgreement;
     private MaterialButton btnFetchInfo;
     private MaterialButton btnRegister;
     private View overlayBackground;
     private CardView cardApprovalStatus;
+    private TextView tvApprovalMessage;
+    private MaterialButton btnConfirmApproval;
     private ProgressBar progressBar;
 
     private String clubName;
@@ -51,15 +60,19 @@ public class MemberRegistrationActivity extends AppCompatActivity {
         isCentralClub = getIntent().getBooleanExtra("is_central_club", false);
         centralClubId = getIntent().getStringExtra("central_club_id");
 
+        android.util.Log.d("MemberRegistration", "onCreate - clubName: " + clubName + ", centralClubId: " + centralClubId);
+
         if (clubName == null || clubName.isEmpty()) {
             clubName = "동아리"; // 기본값
         }
         if (centralClubId == null || centralClubId.isEmpty()) {
             centralClubId = clubName.replaceAll("\\s+", "_").toLowerCase();
+            android.util.Log.d("MemberRegistration", "Generated centralClubId: " + centralClubId);
         }
 
         initViews();
         setupTitle();
+        setupBirthdaySpinners();
         setupListeners();
     }
 
@@ -71,12 +84,50 @@ public class MemberRegistrationActivity extends AppCompatActivity {
         etStudentId = findViewById(R.id.etStudentId);
         etPhone = findViewById(R.id.etPhone);
         etEmail = findViewById(R.id.etEmail);
+        spinnerBirthMonth = findViewById(R.id.spinnerBirthMonth);
+        spinnerBirthDay = findViewById(R.id.spinnerBirthDay);
         cbPrivacyAgreement = findViewById(R.id.cbPrivacyAgreement);
         btnFetchInfo = findViewById(R.id.btnFetchInfo);
         btnRegister = findViewById(R.id.btnRegister);
         overlayBackground = findViewById(R.id.overlayBackground);
         cardApprovalStatus = findViewById(R.id.cardApprovalStatus);
+        tvApprovalMessage = findViewById(R.id.tvApprovalMessage);
+        btnConfirmApproval = findViewById(R.id.btnConfirmApproval);
         progressBar = findViewById(R.id.progressBar);
+    }
+
+    private void setupBirthdaySpinners() {
+        // 월 스피너 설정
+        List<String> months = new ArrayList<>();
+        months.add("선택"); // 0번 인덱스
+        for (int i = 1; i <= 12; i++) {
+            months.add(String.valueOf(i));
+        }
+        ArrayAdapter<String> monthAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, months);
+        monthAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerBirthMonth.setAdapter(monthAdapter);
+
+        // 일 스피너 설정
+        List<String> days = new ArrayList<>();
+        days.add("선택"); // 0번 인덱스
+        for (int i = 1; i <= 31; i++) {
+            days.add(String.valueOf(i));
+        }
+        ArrayAdapter<String> dayAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, days);
+        dayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerBirthDay.setAdapter(dayAdapter);
+    }
+
+    private int getSelectedBirthMonth() {
+        int position = spinnerBirthMonth.getSelectedItemPosition();
+        return position > 0 ? position : 0; // "선택"이면 0 반환
+    }
+
+    private int getSelectedBirthDay() {
+        int position = spinnerBirthDay.getSelectedItemPosition();
+        return position > 0 ? position : 0; // "선택"이면 0 반환
     }
 
     private void setupTitle() {
@@ -90,9 +141,8 @@ public class MemberRegistrationActivity extends AppCompatActivity {
 
         // 정보 가져오기 버튼
         btnFetchInfo.setOnClickListener(v -> {
-            // TODO: 저장된 정보를 가져오는 기능 구현
-            // 예시 데이터로 임시 구현
-            fetchSampleData();
+            // Firebase에서 사용자 정보 가져오기
+            fetchUserInfo();
         });
 
         // 가입신청 하기 버튼
@@ -102,18 +152,88 @@ public class MemberRegistrationActivity extends AppCompatActivity {
             }
         });
 
-        // 오버레이 배경 클릭 시 숨기기
-        overlayBackground.setOnClickListener(v -> hideApprovalStatus());
+        // 오버레이 배경 클릭 - 아무 동작 없음 (카드 바깥 클릭 방지)
+        overlayBackground.setOnClickListener(v -> {
+            // 아무 동작 없음
+        });
+
+        // 확인 버튼 클릭 시 액티비티 종료
+        btnConfirmApproval.setOnClickListener(v -> {
+            finish();
+        });
     }
 
-    private void fetchSampleData() {
-        // 예시 데이터로 필드 채우기
-        etName.setText("홍길동");
-        etDepartment.setText("컴퓨터공학과");
-        etStudentId.setText("20240001");
-        etPhone.setText("010-1234-5678");
-        etEmail.setText("hong@example.com");
-        Toast.makeText(this, "정보를 가져왔습니다", Toast.LENGTH_SHORT).show();
+    private void fetchUserInfo() {
+        // Firebase에서 현재 로그인한 사용자 정보 가져오기
+        String userId = firebaseManager.getCurrentUserId();
+
+        if (userId == null) {
+            Toast.makeText(this, "로그인이 필요합니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+
+        firebaseManager.getDb().collection("users")
+                .document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+
+                    if (documentSnapshot.exists()) {
+                        // 사용자 정보 가져와서 필드에 채우기
+                        String name = documentSnapshot.getString("name");
+                        String department = documentSnapshot.getString("department");
+                        String studentId = documentSnapshot.getString("studentId");
+                        String phone = documentSnapshot.getString("phone");
+                        String email = documentSnapshot.getString("email");
+
+                        // 이메일이 없으면 Firebase Auth에서 가져오기
+                        if (email == null || email.isEmpty()) {
+                            if (firebaseManager.getCurrentUser() != null) {
+                                email = firebaseManager.getCurrentUser().getEmail();
+                            }
+                        }
+
+                        // 필드에 값 설정 (null 체크)
+                        if (name != null && !name.isEmpty()) {
+                            etName.setText(name);
+                        }
+                        if (department != null && !department.isEmpty()) {
+                            etDepartment.setText(department);
+                        }
+                        if (studentId != null && !studentId.isEmpty()) {
+                            etStudentId.setText(studentId);
+                        }
+                        if (phone != null && !phone.isEmpty()) {
+                            etPhone.setText(phone);
+                        }
+                        if (email != null && !email.isEmpty()) {
+                            etEmail.setText(email);
+                        }
+
+                        Toast.makeText(this, "내 정보를 가져왔습니다", Toast.LENGTH_SHORT).show();
+                    } else {
+                        // 사용자 문서가 없으면 이메일만 채우기
+                        if (firebaseManager.getCurrentUser() != null) {
+                            String email = firebaseManager.getCurrentUser().getEmail();
+                            if (email != null) {
+                                etEmail.setText(email);
+                            }
+                        }
+                        Toast.makeText(this, "저장된 정보가 없습니다. 직접 입력해주세요.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                    Toast.makeText(this, "정보를 가져오는데 실패했습니다: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     private boolean validateInputs() {
@@ -170,79 +290,59 @@ public class MemberRegistrationActivity extends AppCompatActivity {
     }
 
     private void registerMember() {
-        // 회원 정보 수집
-        String name = etName.getText().toString().trim();
-        String department = etDepartment.getText().toString().trim();
-        String studentId = etStudentId.getText().toString().trim();
-        String phone = etPhone.getText().toString().trim();
-        String email = etEmail.getText().toString().trim();
-
         if (progressBar != null) {
             progressBar.setVisibility(View.VISIBLE);
         }
 
-        if (isCentralClub) {
-            // 중앙동아리 가입 처리 - Firebase에 저장
-            firebaseManager.joinCentralClub(centralClubId, clubName, new FirebaseManager.SimpleCallback() {
-                @Override
-                public void onSuccess() {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
-                    }
+        int birthMonth = getSelectedBirthMonth();
+        int birthDay = getSelectedBirthDay();
 
-                    // 토스트 메시지에 동아리 이름 포함
-                    String message = clubName + " 동아리 가입이 완료되었습니다!";
-                    Toast.makeText(MemberRegistrationActivity.this, message, Toast.LENGTH_LONG).show();
+        // 입력 정보 가져오기
+        String name = etName.getText() != null ? etName.getText().toString().trim() : "";
+        String department = etDepartment.getText() != null ? etDepartment.getText().toString().trim() : "";
+        String studentId = etStudentId.getText() != null ? etStudentId.getText().toString().trim() : "";
+        String phone = etPhone.getText() != null ? etPhone.getText().toString().trim() : "";
+        String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
 
-                    // 가입 완료 후 동아리 메인 페이지로 이동
-                    Intent intent = new Intent(MemberRegistrationActivity.this, ClubMainActivity.class);
-                    intent.putExtra("club_name", clubName);
-                    intent.putExtra("club_id", centralClubId);
-                    // 이전 액티비티 스택 모두 제거하고 새로 시작
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
+        // 가입 신청 (승인 대기 상태로 생성)
+        firebaseManager.createMembershipApplication(
+                centralClubId,
+                clubName,
+                name,
+                department,
+                studentId,
+                phone,
+                email,
+                birthMonth,
+                birthDay,
+                isCentralClub,
+                new FirebaseManager.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                if (progressBar != null) {
+                    progressBar.setVisibility(View.GONE);
                 }
 
-                @Override
-                public void onFailure(Exception e) {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
-                    }
-                    Toast.makeText(MemberRegistrationActivity.this,
-                        "가입 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        } else {
-            // 일반 동아리 가입 처리
-            firebaseManager.joinGeneralClub(centralClubId, clubName, new FirebaseManager.SimpleCallback() {
-                @Override
-                public void onSuccess() {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
-                    }
+                // 승인 대기 메시지 표시
+                String message = clubName + " 가입 신청이 완료 되었습니다\n승인중이니 잠시만 기다리세요";
 
-                    String message = clubName + " 동아리 가입이 완료되었습니다!";
-                    Toast.makeText(MemberRegistrationActivity.this, message, Toast.LENGTH_LONG).show();
+                // Toast 메시지 표시
+                Toast.makeText(MemberRegistrationActivity.this, message, Toast.LENGTH_LONG).show();
 
-                    Intent intent = new Intent(MemberRegistrationActivity.this, ClubMainActivity.class);
-                    intent.putExtra("club_name", clubName);
-                    intent.putExtra("club_id", centralClubId);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
-                }
+                // 승인 대기 카드 UI 표시
+                tvApprovalMessage.setText(clubName + " 가입 신청이 완료 되었습니다");
+                showApprovalStatus();
+            }
 
-                @Override
-                public void onFailure(Exception e) {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
-                    }
-                    Toast.makeText(MemberRegistrationActivity.this,
-                        "가입 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            @Override
+            public void onFailure(Exception e) {
+                if (progressBar != null) {
+                    progressBar.setVisibility(View.GONE);
                 }
-            });
-        }
+                Toast.makeText(MemberRegistrationActivity.this,
+                    "가입 신청 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showApprovalStatus() {

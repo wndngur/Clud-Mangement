@@ -10,9 +10,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.AdminMainActivity;
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
+import com.example.clubmanagement.SettingsActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 
@@ -23,7 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class ClubListActivity extends AppCompatActivity {
+public class ClubListActivity extends BaseActivity {
 
     private LinearLayout llClubListContainer;
     private ProgressBar progressBar;
@@ -39,20 +40,24 @@ public class ClubListActivity extends AppCompatActivity {
         String description;
         int memberCount; // 현재 인원 수
         Date foundedAt;  // 설립일
+        boolean isCentralClub; // 중앙동아리 여부
 
-        ClubItem(String id, String name, String description, int memberCount, Date foundedAt) {
+        ClubItem(String id, String name, String description, int memberCount, Date foundedAt, boolean isCentralClub) {
             this.id = id;
             this.name = name;
             this.description = description;
             this.memberCount = memberCount;
             this.foundedAt = foundedAt;
+            this.isCentralClub = isCentralClub;
         }
     }
 
-    // 중앙동아리 등록 최소 인원 (신규 등록은 20명 필요)
-    private static final int CENTRAL_CLUB_REGISTER_MIN_MEMBERS = 20;
     // 중앙동아리 신청 가능 최소 일수 (6개월 = 180일)
     private static final int CENTRAL_CLUB_MIN_DAYS = 180;
+
+    // Firebase에서 가져온 인원 제한 값 (기본값 설정)
+    private int registerLimit = 20;
+    private int maintainLimit = 15;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,7 +76,25 @@ public class ClubListActivity extends AppCompatActivity {
         initViews();
         setupBottomNavigation();
         setupBackButton();
-        loadCurrentUser();
+        loadMemberLimits();
+    }
+
+    private void loadMemberLimits() {
+        com.example.clubmanagement.utils.FirebaseManager.getInstance()
+            .getMemberLimits(new com.example.clubmanagement.utils.FirebaseManager.MemberLimitsCallback() {
+                @Override
+                public void onSuccess(int register, int maintain) {
+                    registerLimit = register;
+                    maintainLimit = maintain;
+                    loadCurrentUser();
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    // 실패 시 기본값 사용
+                    loadCurrentUser();
+                }
+            });
     }
 
     private void loadCurrentUser() {
@@ -107,6 +130,8 @@ public class ClubListActivity extends AppCompatActivity {
         if (!fromClubSettings && bottomNavigation.getVisibility() == View.VISIBLE) {
             bottomNavigation.setSelectedItemId(R.id.nav_clubs);
         }
+        // 최고 관리자 모드일 때 추천 메뉴 숨기기
+        updateNavigationForSuperAdmin();
     }
 
     private void initViews() {
@@ -130,6 +155,16 @@ public class ClubListActivity extends AppCompatActivity {
             // 네비게이션 바 표시, 뒤로가기 버튼 숨김
             bottomNavigation.setVisibility(View.VISIBLE);
             ivBack.setVisibility(View.GONE);
+
+            // 최고 관리자 모드일 때 추천 메뉴 숨기기
+            updateNavigationForSuperAdmin();
+        }
+    }
+
+    private void updateNavigationForSuperAdmin() {
+        if (bottomNavigation != null && bottomNavigation.getVisibility() == View.VISIBLE) {
+            boolean isSuperAdmin = SettingsActivity.isSuperAdminMode(this);
+            bottomNavigation.getMenu().findItem(R.id.nav_recommend).setVisible(!isSuperAdmin);
         }
     }
 
@@ -160,6 +195,15 @@ public class ClubListActivity extends AppCompatActivity {
     }
 
     private void navigateToHome() {
+        // 관리자 모드인지 확인
+        if (SettingsActivity.isSuperAdminMode(this)) {
+            Intent intent = new Intent(ClubListActivity.this, AdminMainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         com.example.clubmanagement.utils.FirebaseManager firebaseManager =
             com.example.clubmanagement.utils.FirebaseManager.getInstance();
 
@@ -212,59 +256,98 @@ public class ClubListActivity extends AppCompatActivity {
     }
 
     private void loadClubList() {
-        // Sample club data with member counts and founding dates
-        List<ClubItem> clubs = new ArrayList<>();
-        clubs.add(new ClubItem(
-            "computer_science_club",
-            "컴퓨터공학과 학술동아리",
-            "컴퓨터공학 전공 학생들이 함께 프로그래밍 공부와 프로젝트를 진행하는 동아리입니다. 매주 스터디와 세미나를 진행하며, 학기당 1회 이상 팀 프로젝트를 완성합니다.",
-            18, // 18명 - 2명 더 필요
-            getDateDaysAgo(250) // 250일 전 설립 - 신청 가능
-        ));
-        clubs.add(new ClubItem(
-            "english_conversation_club",
-            "영어회화 동아리",
-            "영어 회화 실력 향상을 목표로 하는 동아리입니다. 원어민 선생님과 함께하는 weekly conversation class와 영어 토론 활동을 진행합니다.",
-            22, // 22명 - 중앙동아리 등록 가능
-            getDateDaysAgo(400) // 400일 전 설립 - 신청 가능
-        ));
-        clubs.add(new ClubItem(
-            "photography_club",
-            "사진 동아리",
-            "사진 촬영 기술과 편집을 배우고 함께 출사를 다니는 동아리입니다. 매달 주제를 정해 작품 활동을 하며, 연말에는 사진전을 개최합니다.",
-            12, // 12명 - 8명 더 필요
-            getDateDaysAgo(90) // 90일 전 설립 - 90일 더 필요
-        ));
-        clubs.add(new ClubItem(
-            "volunteer_club",
-            "봉사 동아리",
-            "지역사회 봉사활동을 중심으로 활동하는 동아리입니다. 매주 노인복지관, 아동센터 등에서 봉사활동을 진행하며, 연 2회 해외 봉사활동도 참여합니다.",
-            15, // 15명 - 5명 더 필요
-            getDateDaysAgo(150) // 150일 전 설립 - 30일 더 필요
-        ));
-        clubs.add(new ClubItem(
-            "band_club",
-            "밴드 동아리",
-            "음악을 사랑하는 학생들이 모여 밴드를 구성하고 공연하는 동아리입니다. 학기당 2회 정기공연을 개최하며, 교내외 행사에도 참여합니다.",
-            8, // 8명 - 12명 더 필요
-            getDateDaysAgo(30) // 30일 전 설립 - 150일 더 필요
-        ));
-        clubs.add(new ClubItem(
-            "startup_club",
-            "창업 동아리",
-            "아이디어를 사업화하고 창업을 준비하는 동아리입니다. 창업 교육, 멘토링, 팀 프로젝트를 진행하며 실제 창업 경진대회에도 참여합니다.",
-            25, // 25명 - 중앙동아리 등록 가능
-            getDateDaysAgo(365) // 1년 전 설립 - 신청 가능
-        ));
+        progressBar.setVisibility(View.VISIBLE);
+        llClubListContainer.removeAllViews();
 
-        // Add accordion items to container, filtering out joined clubs
-        for (ClubItem club : clubs) {
-            // 사용자가 이미 가입한 동아리는 숨기기
-            if (currentUser != null && currentUser.hasJoinedGeneralClub(club.id)) {
-                continue; // Skip this club
-            }
-            addAccordionItem(club);
-        }
+        // Firebase에서 일반동아리 목록 가져오기 (isCentralClub = false)
+        com.example.clubmanagement.utils.FirebaseManager.getInstance()
+            .getAllClubs(new com.example.clubmanagement.utils.FirebaseManager.ClubListCallback() {
+                @Override
+                public void onSuccess(java.util.List<com.example.clubmanagement.models.Club> clubs) {
+                    progressBar.setVisibility(View.GONE);
+
+                    if (clubs.isEmpty()) {
+                        // 동아리가 없을 때 안내 메시지 표시
+                        TextView tvEmpty = new TextView(ClubListActivity.this);
+                        tvEmpty.setText("등록된 일반동아리가 없습니다.");
+                        tvEmpty.setTextSize(16);
+                        tvEmpty.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                        tvEmpty.setPadding(32, 64, 32, 64);
+                        tvEmpty.setGravity(android.view.Gravity.CENTER);
+                        llClubListContainer.addView(tvEmpty);
+                        return;
+                    }
+
+                    // 일반동아리만 필터링 (중앙동아리 제외)
+                    int clubCount = 0;
+                    for (com.example.clubmanagement.models.Club club : clubs) {
+                        // 중앙동아리는 제외
+                        if (club.isCentralClub()) {
+                            continue;
+                        }
+
+                        // 사용자가 이미 가입한 동아리는 숨기기
+                        if (currentUser != null && currentUser.hasJoinedGeneralClub(club.getId())) {
+                            continue;
+                        }
+
+                        clubCount++;
+
+                        // ClubItem으로 변환
+                        Date foundedAt = club.getFoundedAt() != null ?
+                            club.getFoundedAt().toDate() : null;
+
+                        ClubItem clubItem = new ClubItem(
+                            club.getId(),
+                            club.getName(),
+                            club.getDescription() != null ? club.getDescription() : "",
+                            club.getMemberCount(),
+                            foundedAt,
+                            club.isCentralClub()
+                        );
+
+                        // 실제 멤버 수를 Firebase에서 로드하여 아코디언 추가
+                        loadMemberCountAndAddItem(clubItem);
+                    }
+
+                    // 표시된 동아리가 없는 경우
+                    if (clubCount == 0) {
+                        TextView tvEmpty = new TextView(ClubListActivity.this);
+                        tvEmpty.setText("가입 가능한 일반동아리가 없습니다.");
+                        tvEmpty.setTextSize(16);
+                        tvEmpty.setTextColor(getResources().getColor(android.R.color.darker_gray));
+                        tvEmpty.setPadding(32, 64, 32, 64);
+                        tvEmpty.setGravity(android.view.Gravity.CENTER);
+                        llClubListContainer.addView(tvEmpty);
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(ClubListActivity.this,
+                        "동아리 목록을 불러오는데 실패했습니다: " + e.getMessage(),
+                        Toast.LENGTH_SHORT).show();
+                }
+            });
+    }
+
+    private void loadMemberCountAndAddItem(ClubItem clubItem) {
+        // members 서브컬렉션에서 실제 멤버 수 카운트
+        com.example.clubmanagement.utils.FirebaseManager.getInstance()
+            .getDb().collection("clubs")
+            .document(clubItem.id)
+            .collection("members")
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                // 실제 멤버 수로 업데이트
+                clubItem.memberCount = querySnapshot.size();
+                addAccordionItem(clubItem);
+            })
+            .addOnFailureListener(e -> {
+                // 실패해도 기존 값으로 표시
+                addAccordionItem(clubItem);
+            });
     }
 
     private void addAccordionItem(ClubItem club) {
@@ -281,10 +364,18 @@ public class ClubListActivity extends AppCompatActivity {
         MaterialButton btnJoinClub = accordionView.findViewById(R.id.btnJoinClub);
 
         // Member progress views
+        TextView tvMemberSectionTitle = accordionView.findViewById(R.id.tvMemberSectionTitle);
         TextView tvMemberCountText = accordionView.findViewById(R.id.tvMemberCountText);
         View viewMemberProgressBar = accordionView.findViewById(R.id.viewMemberProgressBar);
         TextView tvMemberProgressPercent = accordionView.findViewById(R.id.tvMemberProgressPercent);
         TextView tvMemberStatusMessage = accordionView.findViewById(R.id.tvMemberStatusMessage);
+
+        // 중앙동아리/일반동아리 타이틀 설정
+        if (club.isCentralClub) {
+            tvMemberSectionTitle.setText("👥 중앙동아리 인원 현황");
+        } else {
+            tvMemberSectionTitle.setText("👥 일반동아리 인원 현황");
+        }
 
         // Founding date views
         TextView tvFoundingDateText = accordionView.findViewById(R.id.tvFoundingDateText);
@@ -321,12 +412,12 @@ public class ClubListActivity extends AppCompatActivity {
             }
         });
 
-        // Set click listener for join button
+        // Set click listener for detail view button
         btnJoinClub.setOnClickListener(v -> {
             Intent intent = new Intent(ClubListActivity.this, DetailActivity.class);
             intent.putExtra("club_id", club.id);
             intent.putExtra("club_name", club.name);
-            intent.putExtra("from_club_list", true);
+            intent.putExtra("from_club_list", true);  // 일반동아리 목록에서 왔음
             startActivity(intent);
         });
 
@@ -388,11 +479,11 @@ public class ClubListActivity extends AppCompatActivity {
             TextView tvMemberStatusMessage) {
 
         // 인원 텍스트 설정 (일반동아리는 20명 기준)
-        tvMemberCountText.setText(memberCount + "/" + CENTRAL_CLUB_REGISTER_MIN_MEMBERS + "명");
+        tvMemberCountText.setText(memberCount + "/" + registerLimit + "명");
 
         // 퍼센트 계산 (최대 100%)
-        int percent = memberCount >= CENTRAL_CLUB_REGISTER_MIN_MEMBERS ? 100 :
-            (memberCount * 100 / CENTRAL_CLUB_REGISTER_MIN_MEMBERS);
+        int percent = memberCount >= registerLimit ? 100 :
+            (memberCount * 100 / registerLimit);
         tvMemberProgressPercent.setText(percent + "%");
 
         // 프로그레스바 너비 설정
@@ -414,12 +505,12 @@ public class ClubListActivity extends AppCompatActivity {
         });
 
         // 상태 메시지 설정 (20명 이상이면 중앙동아리 등록 가능)
-        if (memberCount >= CENTRAL_CLUB_REGISTER_MIN_MEMBERS) {
+        if (memberCount >= registerLimit) {
             tvMemberStatusMessage.setText("중앙동아리 등록 가능!");
             tvMemberStatusMessage.setTextColor(
                 androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_green_dark));
         } else {
-            int needed = CENTRAL_CLUB_REGISTER_MIN_MEMBERS - memberCount;
+            int needed = registerLimit - memberCount;
             tvMemberStatusMessage.setText(needed + "명 더 모집 시 중앙동아리 등록 가능");
             tvMemberStatusMessage.setTextColor(
                 androidx.core.content.ContextCompat.getColor(this, android.R.color.holo_orange_dark));

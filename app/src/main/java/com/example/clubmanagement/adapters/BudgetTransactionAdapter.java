@@ -7,9 +7,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.BudgetTransaction;
 
@@ -63,6 +65,8 @@ public class BudgetTransactionAdapter extends RecyclerView.Adapter<BudgetTransac
         private final TextView tvAmount;
         private final TextView tvBalanceAfter;
         private final ImageView ivReceiptIndicator;
+        private final CardView cardReceiptThumbnail;
+        private final ImageView ivReceiptThumbnail;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -73,12 +77,24 @@ public class BudgetTransactionAdapter extends RecyclerView.Adapter<BudgetTransac
             tvAmount = itemView.findViewById(R.id.tvAmount);
             tvBalanceAfter = itemView.findViewById(R.id.tvBalanceAfter);
             ivReceiptIndicator = itemView.findViewById(R.id.ivReceiptIndicator);
+            cardReceiptThumbnail = itemView.findViewById(R.id.cardReceiptThumbnail);
+            ivReceiptThumbnail = itemView.findViewById(R.id.ivReceiptThumbnail);
 
             itemView.setOnClickListener(v -> {
                 int pos = getAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION && listener != null) {
                     listener.onTransactionClick(transactions.get(pos));
                 }
+            });
+
+            // Long press for edit/delete
+            itemView.setOnLongClickListener(v -> {
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION && longClickListener != null) {
+                    longClickListener.onTransactionLongClick(transactions.get(pos));
+                    return true;
+                }
+                return false;
             });
         }
 
@@ -130,12 +146,31 @@ public class BudgetTransactionAdapter extends RecyclerView.Adapter<BudgetTransac
             String balanceText = "잔액: " + numberFormat.format(transaction.getBalanceAfter()) + "원";
             tvBalanceAfter.setText(balanceText);
 
-            // Receipt indicator
-            if (transaction.getReceiptImageUrl() != null && !transaction.getReceiptImageUrl().isEmpty()) {
+            // Receipt image
+            String receiptUrl = transaction.getReceiptImageUrl();
+            if (receiptUrl != null && !receiptUrl.isEmpty()) {
                 ivReceiptIndicator.setVisibility(View.VISIBLE);
+                cardReceiptThumbnail.setVisibility(View.VISIBLE);
+
+                Glide.with(itemView.getContext())
+                        .load(receiptUrl)
+                        .centerCrop()
+                        .into(ivReceiptThumbnail);
             } else {
                 ivReceiptIndicator.setVisibility(View.GONE);
+                cardReceiptThumbnail.setVisibility(View.GONE);
             }
         }
+    }
+
+    // Long click listener for edit/delete
+    public interface OnTransactionLongClickListener {
+        void onTransactionLongClick(BudgetTransaction transaction);
+    }
+
+    private OnTransactionLongClickListener longClickListener;
+
+    public void setOnTransactionLongClickListener(OnTransactionLongClickListener listener) {
+        this.longClickListener = listener;
     }
 }

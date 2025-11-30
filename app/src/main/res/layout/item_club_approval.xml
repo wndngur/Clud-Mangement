@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardView"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header (항상 표시) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical">
+
+            <!-- Club Info -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvClubName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="동아리명"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black"/>
+
+                <TextView
+                    android:id="@+id/tvApplicantInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="신청자: email@example.com"
+                    android:textSize="13sp"
+                    android:textColor="@android:color/darker_gray"
+                    android:layout_marginTop="4dp"/>
+
+                <TextView
+                    android:id="@+id/tvDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2024-01-01 12:00"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/darker_gray"
+                    android:layout_marginTop="2dp"/>
+
+            </LinearLayout>
+
+            <!-- Expand Arrow -->
+            <ImageView
+                android:id="@+id/ivExpand"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@android:drawable/arrow_down_float"
+                android:contentDescription="펼치기"/>
+
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"/>
+
+        <!-- Details (드릴다운 시 표시) -->
+        <LinearLayout
+            android:id="@+id/layoutDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone"
+            android:background="#FAFAFA">
+
+            <!-- 동아리 설명 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="동아리 설명"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#1565C0"/>
+
+            <TextView
+                android:id="@+id/tvDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="동아리 설명 내용"
+                android:textSize="14sp"
+                android:textColor="@android:color/black"
+                android:layout_marginTop="4dp"
+                android:background="@android:color/white"
+                android:padding="12dp"/>
+
+            <!-- 설립 목적 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="설립 목적"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#1565C0"
+                android:layout_marginTop="12dp"/>
+
+            <TextView
+                android:id="@+id/tvPurpose"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="설립 목적 내용"
+                android:textSize="14sp"
+                android:textColor="@android:color/black"
+                android:layout_marginTop="4dp"
+                android:background="@android:color/white"
+                android:padding="12dp"/>
+
+            <!-- 활동 계획 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="활동 계획"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#1565C0"
+                android:layout_marginTop="12dp"/>
+
+            <TextView
+                android:id="@+id/tvActivityPlan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="활동 계획 내용"
+                android:textSize="14sp"
+                android:textColor="@android:color/black"
+                android:layout_marginTop="4dp"
+                android:background="@android:color/white"
+                android:padding="12dp"/>
+
+            <!-- 버튼들 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="end">
+
+                <!-- 불가 버튼 -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnReject"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="불가"
+                    android:textColor="@android:color/white"
+                    app:backgroundTint="#F44336"
+                    app:cornerRadius="8dp"/>
+
+                <!-- 승인 버튼 -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnApprove"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:text="승인"
+                    android:textColor="@android:color/white"
+                    app:backgroundTint="#4CAF50"
+                    app:cornerRadius="8dp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

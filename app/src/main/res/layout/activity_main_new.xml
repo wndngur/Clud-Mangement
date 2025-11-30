@@ -17,48 +17,58 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Top Control Bar (Settings Only) -->
+    <!-- Top Control Bar (Logo + Admin Indicator) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topControlBar"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:background="@android:color/transparent"
+        android:background="@android:color/white"
+        android:elevation="4dp"
         app:layout_constraintTop_toBottomOf="@id/statusBarSpacer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Admin Mode Indicator (Center) -->
+        <!-- 좌측 로고 -->
+        <ImageView
+            android:id="@+id/ivLogo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="16dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="앱 로고"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvLogoText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="동아리 관리"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            app:layout_constraintStart_toEndOf="@id/ivLogo"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <!-- Admin Mode Indicator (Right) -->
         <TextView
             android:id="@+id/tvAdminModeIndicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="관리자 모드 실행중"
-            android:textSize="14sp"
+            android:layout_marginEnd="16dp"
+            android:text="관리자"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
             android:background="@android:color/holo_red_dark"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:visibility="gone"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
-
-        <!-- Settings Icon (Black) -->
-        <ImageView
-            android:id="@+id/ivSettings"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="16dp"
-            android:padding="12dp"
-            android:src="@android:drawable/ic_menu_manage"
-            android:contentDescription="설정"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/black"
-            android:elevation="8dp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>

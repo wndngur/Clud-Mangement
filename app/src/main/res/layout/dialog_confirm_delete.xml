@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:src="@android:drawable/ic_dialog_alert"
+        android:contentDescription="경고"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="동아리 삭제 확인"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textAlignment="center"
+        android:layout_marginTop="16dp"/>
+
+    <TextView
+        android:id="@+id/tvDeleteMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="선택한 동아리를 삭제하시겠습니까?"
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        android:textAlignment="center"
+        android:layout_marginTop="8dp"/>
+
+    <!-- 삭제될 동아리 목록 -->
+    <TextView
+        android:id="@+id/tvClubList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textColor="@android:color/holo_red_dark"
+        android:textAlignment="center"
+        android:layout_marginTop="12dp"
+        android:background="#FFEBEE"
+        android:padding="12dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⚠️ 이 작업은 되돌릴 수 없습니다!\n삭제 시 해당 동아리 부원들에게 알림이 발송됩니다."
+        android:textSize="12sp"
+        android:textColor="@android:color/holo_orange_dark"
+        android:layout_marginTop="16dp"/>
+
+    <!-- 확인 체크박스 -->
+    <CheckBox
+        android:id="@+id/cbConfirm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="위 내용을 확인했으며, 삭제에 동의합니다"
+        android:textSize="14sp"
+        android:layout_marginTop="16dp"/>
+
+</LinearLayout>

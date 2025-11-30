@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:padding="2dp">
+
+    <LinearLayout
+        android:id="@+id/llDayContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackgroundBorderless">
+
+        <!-- Day Number -->
+        <TextView
+            android:id="@+id/tvDay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1"
+            android:textSize="14sp"
+            android:textColor="@android:color/black"
+            android:gravity="center"/>
+
+        <!-- Schedule Indicator Dot -->
+        <View
+            android:id="@+id/viewScheduleIndicator"
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:background="@drawable/schedule_indicator_dot"
+            android:visibility="gone"
+            android:layout_marginTop="2dp"/>
+
+    </LinearLayout>
+
+    <!-- Today Highlight Background (Circle) -->
+    <View
+        android:id="@+id/viewTodayBg"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center"
+        android:background="@drawable/today_circle_background"
+        android:visibility="gone"/>
+
+    <!-- Selected Day Background -->
+    <View
+        android:id="@+id/viewSelectedBg"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center"
+        android:background="@drawable/selected_day_background"
+        android:visibility="gone"/>
+
+</FrameLayout>

@@ -5,22 +5,47 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    <!-- 상단 바 (로고) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary"
+        android:layout_height="56dp"
+        android:background="@android:color/white"
         android:elevation="4dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:title="메인 설정"
-        app:titleTextColor="@android:color/white"
-        app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"/>
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- 좌측 로고 -->
+        <ImageView
+            android:id="@+id/ivLogo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="16dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="앱 로고"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvLogoText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="동아리 관리"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            app:layout_constraintStart_toEndOf="@id/ivLogo"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigation">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -31,24 +56,29 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="메인 페이지 설정"
+                android:text="내 정보"
                 android:textSize="24sp"
                 android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="캐러셀 메인 페이지의 설정을 관리합니다"
-                android:textSize="16sp"
-                android:layout_marginTop="16dp"/>
+                android:text="계정 및 앱 설정을 관리합니다"
+                android:textSize="14sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginTop="8dp"/>
 
-            <!-- Admin Role Card -->
+            <!-- 계정 정보 카드 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAccountInfo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                android:clickable="true"
+                android:focusable="true"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:rippleColor="@color/purple_200">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -56,43 +86,454 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="최고 관리자 권한"
-                        android:textSize="18sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/tvAdminStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="현재 상태: 일반 사용자"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/darker_gray"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <!-- Super Admin Button (토글 방식) -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSuperAdmin"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="최고 관리자 모드"
-                        android:textSize="16sp"
-                        app:icon="@android:drawable/star_big_on"
-                        app:iconGravity="start"/>
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="계정 정보"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_menu_edit"
+                            android:contentDescription="수정"
+                            android:alpha="0.5"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvUserEmail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="로그인되지 않음"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <TextView
+                        android:id="@+id/tvUserName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="4dp"
+                        android:visibility="gone"/>
+
+                    <TextView
+                        android:id="@+id/tvUserDepartment"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="4dp"
+                        android:visibility="gone"/>
+
+                    <TextView
+                        android:id="@+id/tvUserPhone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="4dp"
+                        android:visibility="gone"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="탭하여 정보 수정"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginTop="8dp"/>
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- General Settings Card -->
+            <!-- 중앙동아리 신청 명단 카드 (최고 관리자 전용) -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardCentralClubApplications"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardCornerRadius="8dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="@color/purple_500"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_agenda"
+                            android:contentDescription="신청 명단"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="중앙동아리 신청 명단"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="일반 동아리에서 중앙동아리로 승격 신청한 동아리 목록을 확인하고 승인할 수 있습니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCentralClubApplications"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="신청 명단 보기"
+                        app:icon="@android:drawable/ic_menu_view"
+                        app:iconGravity="textStart"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 전체 공지 카드 (최고 관리자 전용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardGlobalNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#E91E63"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_dialog_alert"
+                            android:contentDescription="전체 공지"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="전체 공지"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnGlobalNotice"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="전체 공지 작성"
+                        android:backgroundTint="#E91E63"
+                        app:icon="@android:drawable/ic_menu_send"
+                        app:iconGravity="textStart"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 내 동아리 카드 (일반 사용자용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardMyClubs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#2196F3"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_myplaces"
+                            android:contentDescription="내 동아리"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="내 동아리"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvMyClubsDescription"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="가입한 동아리가 없습니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <!-- 중앙동아리 섹션 -->
+                    <LinearLayout
+                        android:id="@+id/llCentralClubSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🏆 중앙동아리"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="#9C27B0"/>
+
+                        <TextView
+                            android:id="@+id/tvCentralClubName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textSize="16sp"
+                            android:textColor="@android:color/black"
+                            android:padding="12dp"
+                            android:layout_marginTop="4dp"
+                            android:background="#F3E5F5"/>
+
+                    </LinearLayout>
+
+                    <!-- 일반동아리 섹션 -->
+                    <LinearLayout
+                        android:id="@+id/llGeneralClubsSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📋 일반동아리"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="#2196F3"/>
+
+                        <LinearLayout
+                            android:id="@+id/llGeneralClubsList"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="4dp"/>
+
+                    </LinearLayout>
+
+                    <!-- 가입한 동아리 목록 표시 영역 (호환성 유지) -->
+                    <LinearLayout
+                        android:id="@+id/llMyClubsList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMyClubs"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="내 동아리 보기"
+                        android:visibility="gone"
+                        app:icon="@android:drawable/ic_menu_view"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#2196F3"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 동아리 설립 신청 카드 (일반 사용자용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardClubEstablish"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#4CAF50"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_input_add"
+                            android:contentDescription="동아리 설립"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="동아리 설립 신청"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="새로운 일반 동아리를 설립하고 싶다면 신청해주세요. 관리자 승인 후 동아리 목록에 등록됩니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClubEstablish"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="설립 신청하기"
+                        app:icon="@android:drawable/ic_input_add"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#4CAF50"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 일반동아리 설립 승인 카드 (최고 관리자 전용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardClubApproval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#FF9800"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_manage"
+                            android:contentDescription="설립 승인"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="일반동아리 설립 승인"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="일반 동아리 설립 신청 목록을 확인하고 승인 또는 거절할 수 있습니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClubApproval"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="신청 목록 보기"
+                        app:icon="@android:drawable/ic_menu_view"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#FF9800"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 일반 설정 카드 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardGeneralSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="4dp">
 
                 <LinearLayout
@@ -108,28 +549,467 @@
                         android:textSize="18sp"
                         android:textStyle="bold"/>
 
+                    <!-- 알림 설정 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="16dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="알림"
+                                android:textSize="16sp"
+                                android:textColor="@android:color/black"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="공지사항 및 동아리 알림 받기"
+                                android:textSize="12sp"
+                                android:textColor="@android:color/darker_gray"/>
+
+                        </LinearLayout>
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchNotification"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"/>
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#E0E0E0"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <!-- 테마 설정 -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="• 알림 설정\n• 언어 설정\n• 테마 설정"
-                        android:textSize="14sp"
-                        android:layout_marginTop="8dp"/>
+                        android:text="테마"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="앱의 색상 테마를 변경합니다"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginBottom="8dp"/>
+
+                    <RadioGroup
+                        android:id="@+id/rgTheme"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <RadioButton
+                            android:id="@+id/rbThemeOriginal"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="오리지널 (기본)"
+                            android:padding="8dp"
+                            android:checked="true"/>
+
+                        <RadioButton
+                            android:id="@+id/rbThemeBW"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="블랙 앤 화이트 (사진은 컬러)"
+                            android:padding="8dp"/>
+
+                        <RadioButton
+                            android:id="@+id/rbThemeGrayscale"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="흑백 (색약자용, 사진도 흑백)"
+                            android:padding="8dp"/>
+
+                    </RadioGroup>
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Progress Bar -->
-            <ProgressBar
-                android:id="@+id/progressBarSettings"
-                android:layout_width="wrap_content"
+            <!-- 동아리 삭제 카드 (최고 관리자 전용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardClubDelete"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#F44336"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_delete"
+                            android:contentDescription="동아리 삭제"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="동아리 삭제"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="등록된 동아리를 선택하여 삭제할 수 있습니다. 삭제 시 해당 동아리 부원들에게 알림이 발송됩니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClubDelete"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="동아리 삭제 관리"
+                        app:icon="@android:drawable/ic_menu_delete"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#F44336"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 전체 배너 관리 카드 (최고 관리자 전용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardBannerManagement"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#03A9F4"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_gallery"
+                            android:contentDescription="배너 관리"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="전체 동아리 배너 관리"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="모든 동아리에 동일한 배너를 일괄 추가하거나 삭제할 수 있습니다. 추가된 배너는 각 동아리 메인 화면에 표시됩니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddGlobalBanner"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="전체 배너 추가"
+                        app:icon="@android:drawable/ic_input_add"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#03A9F4"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearGlobalBanners"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="8dp"
+                        android:text="전체 배너 초기화"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        app:icon="@android:drawable/ic_menu_delete"
+                        app:iconGravity="textStart"
+                        app:strokeColor="#F44336"
+                        android:textColor="#F44336"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 중앙동아리 인원 제한 수정 카드 (최고 관리자 전용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardMemberLimit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#9C27B0"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_my_calendar"
+                            android:contentDescription="인원 제한"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="중앙동아리 인원 제한 수정"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="중앙동아리 등록 및 유지에 필요한 최소 인원 수를 수정할 수 있습니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <!-- 현재 설정 표시 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
+                        android:background="#F3E5F5"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="등록 최소 인원"
+                                android:textSize="12sp"
+                                android:textColor="@android:color/darker_gray"/>
+
+                            <TextView
+                                android:id="@+id/tvCurrentRegisterLimit"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="20명"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="#9C27B0"/>
+
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="#CE93D8"/>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="유지 최소 인원"
+                                android:textSize="12sp"
+                                android:textColor="@android:color/darker_gray"/>
+
+                            <TextView
+                                android:id="@+id/tvCurrentMaintainLimit"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="15명"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="#9C27B0"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEditMemberLimit"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="인원 제한 수정"
+                        app:icon="@android:drawable/ic_menu_edit"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#9C27B0"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 테스트 데이터 관리 카드 (최고 관리자 전용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTestData"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#607D8B"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_recent_history"
+                            android:contentDescription="테스트 데이터"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="테스트 데이터 관리"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="개발용 테스트 데이터를 생성하거나 삭제할 수 있습니다. 동아리, 부원, 캐러셀 아이템이 포함됩니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnInjectTestData"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="테스트 데이터 생성"
+                        app:icon="@android:drawable/ic_input_add"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#607D8B"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDeleteTestData"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="8dp"
+                        android:text="테스트 데이터 삭제"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        app:icon="@android:drawable/ic_menu_delete"
+                        app:iconGravity="textStart"
+                        app:strokeColor="#F44336"
+                        android:textColor="#F44336"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 로그아웃 버튼 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLogout"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
                 android:layout_marginTop="24dp"
-                android:visibility="gone"/>
+                android:text="로그아웃"
+                android:textSize="16sp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                app:cornerRadius="8dp"
+                app:strokeColor="@android:color/holo_red_light"
+                android:textColor="@android:color/holo_red_light"/>
 
         </LinearLayout>
 
     </ScrollView>
+
+    <!-- Bottom Navigation Bar -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/windowBackground"
+        android:elevation="8dp"
+        app:menu="@menu/bottom_nav_menu"
+        app:labelVisibilityMode="labeled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

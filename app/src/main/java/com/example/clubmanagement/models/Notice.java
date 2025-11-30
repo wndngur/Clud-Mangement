@@ -6,6 +6,7 @@ public class Notice {
     private String id;
     private String title;
     private String content;
+    private String linkUrl;     // 링크 URL (선택)
     private int position;       // Order in list (0, 1, 2)
     private Timestamp createdAt;
     private Timestamp updatedAt;
@@ -24,6 +25,16 @@ public class Notice {
         this.updatedAt = Timestamp.now();
     }
 
+    public Notice(String id, String title, String content, String linkUrl, int position) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.linkUrl = linkUrl;
+        this.position = position;
+        this.createdAt = Timestamp.now();
+        this.updatedAt = Timestamp.now();
+    }
+
     // Getters
     public String getId() {
         return id;
@@ -35,6 +46,14 @@ public class Notice {
 
     public String getContent() {
         return content;
+    }
+
+    public String getLinkUrl() {
+        return linkUrl;
+    }
+
+    public boolean hasLink() {
+        return linkUrl != null && !linkUrl.isEmpty();
     }
 
     public int getPosition() {
@@ -64,6 +83,10 @@ public class Notice {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public void setLinkUrl(String linkUrl) {
+        this.linkUrl = linkUrl;
     }
 
     public void setPosition(int position) {

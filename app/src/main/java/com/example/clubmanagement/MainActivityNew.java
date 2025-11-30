@@ -2,12 +2,10 @@ package com.example.clubmanagement;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.clubmanagement.adapters.CarouselAdapter;
@@ -19,11 +17,10 @@ import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivityNew extends AppCompatActivity {
+public class MainActivityNew extends BaseActivity {
 
     private ViewPager2 viewPager;
     private CarouselAdapter carouselAdapter;
-    private ImageView ivSettings;
     private BottomNavigationView bottomNavigation;
     private MaterialButton btnDetailView;
     private TextView tvPageCounter;
@@ -32,6 +29,7 @@ public class MainActivityNew extends AppCompatActivity {
 
     private FirebaseManager firebaseManager;
     private int totalPages = 3;
+    private List<CarouselItem> currentCarouselItems = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,91 +62,138 @@ public class MainActivityNew extends AppCompatActivity {
             return;
         }
 
-        firebaseManager.getCurrentUser(new FirebaseManager.UserCallback() {
-            @Override
-            public void onSuccess(com.example.clubmanagement.models.User user) {
-                progressBar.setVisibility(ProgressBar.GONE);
+        // 먼저 승인된 가입 신청이 있는지 확인
+        checkApprovedMembershipAndRedirect();
+    }
 
-                if (user != null && user.hasJoinedCentralClub()) {
-                    // 중앙동아리에 가입된 경우 - 동아리 페이지로 바로 이동
-                    Intent intent = new Intent(MainActivityNew.this,
-                            com.example.clubmanagement.activities.ClubMainActivity.class);
-                    intent.putExtra("club_name", user.getCentralClubName());
-                    intent.putExtra("club_id", user.getCentralClubId());
-                    startActivity(intent);
-                    finish();
-                } else {
-                    // 중앙동아리 미가입 - 메인 화면 표시
-                    initViews();
-                    loadCarouselData();
-                    setupListeners();
+    private void checkApprovedMembershipAndRedirect() {
+        firebaseManager.checkApprovedMembershipApplication(application -> {
+            if (application != null) {
+                // 승인된 가입 신청이 있음 - 토스트 표시 후 동아리로 이동
+                String clubName = (String) application.get("clubName");
+                String clubId = (String) application.get("clubId");
+                String applicationPath = (String) application.get("applicationDocPath");
+                Boolean isCentralClub = (Boolean) application.get("isCentralClub");
+
+                // 알림 확인 완료 표시
+                if (applicationPath != null) {
+                    firebaseManager.markMembershipApplicationNotified(applicationPath, new FirebaseManager.SimpleCallback() {
+                        @Override
+                        public void onSuccess() {
+                            // 성공
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            // 실패해도 무시
+                        }
+                    });
                 }
-            }
 
-            @Override
-            public void onFailure(Exception e) {
                 progressBar.setVisibility(ProgressBar.GONE);
-                // 오류 발생 시에도 메인 화면 표시
-                initViews();
-                loadCarouselData();
-                setupListeners();
+
+                // 토스트 메시지 표시
+                String message = clubName + " 동아리 가입이 완료되었습니다!";
+                Toast.makeText(MainActivityNew.this, message, Toast.LENGTH_LONG).show();
+
+                // 동아리 메인 페이지로 이동
+                Intent intent = new Intent(MainActivityNew.this,
+                        com.example.clubmanagement.activities.ClubMainActivity.class);
+                intent.putExtra("club_name", clubName);
+                intent.putExtra("club_id", clubId);
+                intent.putExtra("isCentralClub", isCentralClub != null ? isCentralClub : false);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            } else {
+                // 승인된 가입 신청이 없음 - 기존 로직 실행
+                checkExistingMembership();
             }
         });
+    }
+
+    private void checkExistingMembership() {
+        // 중앙동아리 가입 여부와 관계없이 캐러셀 화면 표시
+        // (다른 중앙동아리 정보 확인 가능)
+        progressBar.setVisibility(ProgressBar.GONE);
+        initViews();
+        loadCarouselData();
+        setupListeners();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // 중앙동아리 가입 여부를 다시 확인하여 가입된 경우 동아리 페이지로 리다이렉트
-        checkCentralClubMembershipAndRedirect();
 
-        // 관리자 모드 표시 업데이트 (설정에서 돌아올 때를 위해)
-        updateAdminModeIndicator();
+        // 로그인된 경우에만 확인
+        if (firebaseManager.getCurrentUserId() != null) {
+            // 먼저 승인된 가입 신청이 있는지 확인
+            checkApprovedMembershipOnResume();
+        } else {
+            // 관리자 모드 표시 업데이트 (설정에서 돌아올 때를 위해)
+            updateAdminModeIndicator();
+
+            // 최고 관리자에게 동아리 추천 메뉴 숨기기 업데이트
+            updateNavigationForSuperAdmin();
+        }
     }
 
-    private void checkCentralClubMembershipAndRedirect() {
-        // 로그인되지 않은 경우 스킵
-        if (firebaseManager.getCurrentUserId() == null) {
-            if (bottomNavigation != null) {
-                bottomNavigation.setSelectedItemId(R.id.nav_home);
-            }
-            return;
-        }
+    private void checkApprovedMembershipOnResume() {
+        firebaseManager.checkApprovedMembershipApplication(application -> {
+            if (application != null) {
+                // 승인된 가입 신청이 있음 - 토스트 표시 후 동아리로 이동
+                String clubName = (String) application.get("clubName");
+                String clubId = (String) application.get("clubId");
+                String applicationPath = (String) application.get("applicationDocPath");
+                Boolean isCentralClub = (Boolean) application.get("isCentralClub");
 
-        firebaseManager.getCurrentUser(new FirebaseManager.UserCallback() {
-            @Override
-            public void onSuccess(com.example.clubmanagement.models.User user) {
-                if (user != null && user.hasJoinedCentralClub()) {
-                    // 중앙동아리에 가입된 경우 - 동아리 페이지로 바로 이동
-                    Intent intent = new Intent(MainActivityNew.this,
-                            com.example.clubmanagement.activities.ClubMainActivity.class);
-                    intent.putExtra("club_name", user.getCentralClubName());
-                    intent.putExtra("club_id", user.getCentralClubId());
-                    // 뒤로가기 방지를 위해 태스크 스택 클리어
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
-                } else {
-                    // 미가입 상태 - 홈 버튼 선택 상태로 설정
-                    if (bottomNavigation != null) {
-                        bottomNavigation.setSelectedItemId(R.id.nav_home);
-                    }
-                }
-            }
+                // 알림 확인 완료 표시
+                if (applicationPath != null) {
+                    firebaseManager.markMembershipApplicationNotified(applicationPath, new FirebaseManager.SimpleCallback() {
+                        @Override
+                        public void onSuccess() {}
 
-            @Override
-            public void onFailure(Exception e) {
-                // 오류 발생 시 홈 버튼 선택 상태로 설정
-                if (bottomNavigation != null) {
-                    bottomNavigation.setSelectedItemId(R.id.nav_home);
+                        @Override
+                        public void onFailure(Exception e) {}
+                    });
                 }
+
+                // 토스트 메시지 표시
+                String message = clubName + " 동아리 가입이 완료되었습니다!";
+                Toast.makeText(MainActivityNew.this, message, Toast.LENGTH_LONG).show();
+
+                // 동아리 메인 페이지로 이동
+                Intent intent = new Intent(MainActivityNew.this,
+                        com.example.clubmanagement.activities.ClubMainActivity.class);
+                intent.putExtra("club_name", clubName);
+                intent.putExtra("club_id", clubId);
+                intent.putExtra("isCentralClub", isCentralClub != null ? isCentralClub : false);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            } else {
+                // 승인된 가입 신청이 없음 - 기존 로직 실행
+                checkCentralClubMembershipAndRedirect();
+
+                // 관리자 모드 표시 업데이트
+                updateAdminModeIndicator();
+
+                // 최고 관리자에게 동아리 추천 메뉴 숨기기 업데이트
+                updateNavigationForSuperAdmin();
             }
         });
     }
 
+    private void checkCentralClubMembershipAndRedirect() {
+        // 중앙동아리 가입 여부와 관계없이 캐러셀 화면 유지
+        // (다른 중앙동아리 정보 확인 가능)
+        if (bottomNavigation != null) {
+            bottomNavigation.setSelectedItemId(R.id.nav_home);
+        }
+    }
+
     private void initViews() {
         viewPager = findViewById(R.id.viewPager);
-        ivSettings = findViewById(R.id.ivSettings);
         bottomNavigation = findViewById(R.id.bottomNavigation);
         btnDetailView = findViewById(R.id.btnDetailView);
         tvPageCounter = findViewById(R.id.tvPageCounter);
@@ -160,6 +205,16 @@ public class MainActivityNew extends AppCompatActivity {
 
         // 관리자 모드 표시 업데이트
         updateAdminModeIndicator();
+
+        // 최고 관리자에게 동아리 추천 메뉴 숨기기
+        updateNavigationForSuperAdmin();
+    }
+
+    private void updateNavigationForSuperAdmin() {
+        if (bottomNavigation != null) {
+            boolean isSuperAdmin = SettingsActivity.isSuperAdminMode(this);
+            bottomNavigation.getMenu().findItem(R.id.nav_recommend).setVisible(!isSuperAdmin);
+        }
     }
 
     private void updateAdminModeIndicator() {
@@ -178,57 +233,67 @@ public class MainActivityNew extends AppCompatActivity {
                 progressBar.setVisibility(ProgressBar.GONE);
 
                 if (items != null && !items.isEmpty()) {
-                    // Use Firebase data
-                    setupCarousel(items);
+                    // Firebase 데이터에서 position이 0, 1, 2인 중앙 동아리 캐러셀만 필터링
+                    List<CarouselItem> centralCarouselItems = new ArrayList<>();
+                    for (CarouselItem item : items) {
+                        // position이 0, 1, 2이고 유효한 데이터인 경우만 사용
+                        if (item.getPosition() >= 0 && item.getPosition() <= 2
+                            && item.getTitle() != null && !item.getTitle().isEmpty()) {
+                            centralCarouselItems.add(item);
+                        }
+                    }
+
+                    // 필터링된 결과가 있으면 사용, 없으면 빈 상태 표시
+                    if (!centralCarouselItems.isEmpty()) {
+                        // position 순서대로 정렬
+                        centralCarouselItems.sort((a, b) -> Integer.compare(a.getPosition(), b.getPosition()));
+                        setupCarousel(centralCarouselItems);
+                        // 상세보기 버튼 표시
+                        if (btnDetailView != null) {
+                            btnDetailView.setVisibility(android.view.View.VISIBLE);
+                        }
+                    } else {
+                        showEmptyCarouselState();
+                    }
                 } else {
-                    // Use default data
-                    setupCarousel(getDefaultCarouselItems());
+                    // 데이터 없음 - 빈 상태 표시
+                    showEmptyCarouselState();
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 progressBar.setVisibility(ProgressBar.GONE);
-                Toast.makeText(MainActivityNew.this, "데이터 로드 실패, 기본 데이터 사용", Toast.LENGTH_SHORT).show();
-                // Use default data on error
-                setupCarousel(getDefaultCarouselItems());
+                // 오류 발생 시 빈 상태 표시
+                showEmptyCarouselState();
             }
         });
     }
 
-    private List<CarouselItem> getDefaultCarouselItems() {
-        List<CarouselItem> items = new ArrayList<>();
-
-        // 첫 번째 캐러셀 (서명 시스템)
-        CarouselItem item1 = new CarouselItem(
-                R.drawable.carousel_image_1,  // drawable 폴더에 이미지 넣기
-                "서명 시스템",
-                "간편하게 디지털 서명을 생성하고\n문서에 자동으로 삽입하세요"
+    private void showEmptyCarouselState() {
+        // 빈 캐러셀 아이템 생성 (등록된 중앙동아리 없음 안내)
+        List<CarouselItem> emptyItems = new ArrayList<>();
+        CarouselItem emptyItem = new CarouselItem(
+                0,  // 이미지 없음
+                "등록된 중앙동아리가 없습니다",
+                "중앙동아리가 승인되면\n여기에 표시됩니다"
         );
-        items.add(item1);
+        emptyItems.add(emptyItem);
+        setupCarousel(emptyItems);
 
-        // 두 번째 캐러셀 (문서 관리)
-        CarouselItem item2 = new CarouselItem(
-                R.drawable.carousel_image_2,  // drawable 폴더에 이미지 넣기
-                "문서 관리",
-                "클럽 활동 보고서부터 회의록까지\n한 곳에서 관리하세요"
-        );
-        items.add(item2);
-
-        // 세 번째 캐러셀 (부원 관리)
-        CarouselItem item3 = new CarouselItem(
-                R.drawable.carousel_image_3,  // drawable 폴더에 이미지 넣기
-                "부원 관리",
-                "부원 정보와 서명 현황을\n실시간으로 확인하세요"
-        );
-        items.add(item3);
-
-        return items;
+        // 상세보기 버튼 숨김
+        if (btnDetailView != null) {
+            btnDetailView.setVisibility(android.view.View.GONE);
+        }
     }
 
     private void setupCarousel(List<CarouselItem> items) {
         // Update total pages
         totalPages = items.size();
+
+        // 현재 캐러셀 아이템 저장
+        currentCarouselItems.clear();
+        currentCarouselItems.addAll(items);
 
         // 어댑터 설정
         carouselAdapter = new CarouselAdapter(items);
@@ -248,18 +313,26 @@ public class MainActivityNew extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        // 톱니바퀴 아이콘 클릭 -> 설정 화면
-        ivSettings.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivityNew.this, SettingsActivity.class);
-            startActivity(intent);
-        });
-
         // 상세 보기 버튼 클릭
         btnDetailView.setOnClickListener(v -> {
             int currentPage = viewPager.getCurrentItem();
             Intent intent = new Intent(MainActivityNew.this,
                 com.example.clubmanagement.activities.DetailActivity.class);
             intent.putExtra("page_index", currentPage);
+
+            // 현재 캐러셀 아이템의 clubId와 clubName 전달
+            if (currentPage < currentCarouselItems.size()) {
+                CarouselItem currentItem = currentCarouselItems.get(currentPage);
+                if (currentItem.getClubId() != null && !currentItem.getClubId().isEmpty()) {
+                    intent.putExtra("club_id", currentItem.getClubId());
+                }
+                if (currentItem.getClubName() != null && !currentItem.getClubName().isEmpty()) {
+                    intent.putExtra("club_name", currentItem.getClubName());
+                } else if (currentItem.getTitle() != null) {
+                    intent.putExtra("club_name", currentItem.getTitle());
+                }
+            }
+
             startActivity(intent);
         });
 
@@ -273,6 +346,7 @@ public class MainActivityNew extends AppCompatActivity {
             } else if (itemId == R.id.nav_clubs) {
                 Intent intent = new Intent(MainActivityNew.this,
                         com.example.clubmanagement.activities.ClubListActivity.class);
+                intent.putExtra("from_club_settings", false);  // 네비게이션 바 표시
                 startActivity(intent);
                 return true;
             } else if (itemId == R.id.nav_recommend) {
@@ -281,7 +355,9 @@ public class MainActivityNew extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             } else if (itemId == R.id.nav_myinfo) {
-                Toast.makeText(this, "내정보", Toast.LENGTH_SHORT).show();
+                // 내정보 클릭 시 설정 화면으로 이동
+                Intent intent = new Intent(MainActivityNew.this, SettingsActivity.class);
+                startActivity(intent);
                 return true;
             }
 

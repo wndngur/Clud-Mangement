@@ -58,7 +58,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:visibility="gone"
                 android:layout_marginEnd="4dp"
-                android:tint="#F44336"/>
+                app:tint="#F44336"/>
 
             <!-- Expand/Collapse Icon -->
             <ImageView
@@ -89,12 +89,54 @@
 
             <TextView
                 android:id="@+id/tvNoticeContent"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="공지사항 내용이 여기에 표시됩니다."
                 android:textSize="14sp"
                 android:textColor="@android:color/darker_gray"
                 android:lineSpacingExtra="4dp"/>
+
+            <!-- Link Section -->
+            <LinearLayout
+                android:id="@+id/llLinkSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="12dp"
+                android:padding="12dp"
+                android:background="@drawable/info_section_background"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_menu_compass"
+                    android:contentDescription="링크"
+                    app:tint="@color/purple_500"/>
+
+                <TextView
+                    android:id="@+id/tvNoticeLink"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="https://example.com"
+                    android:textSize="13sp"
+                    android:textColor="@color/purple_500"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@android:drawable/ic_menu_send"
+                    android:contentDescription="이동"
+                    app:tint="@color/purple_500"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 

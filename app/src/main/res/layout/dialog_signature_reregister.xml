@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="새 서명 등록"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="아래 영역에 서명해주세요"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="16dp"/>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:background="@drawable/signature_border"
+        android:layout_marginBottom="8dp">
+
+        <com.example.clubmanagement.views.SignatureView
+            android:id="@+id/signatureView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </FrameLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnClearSignature"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:text="서명 지우기"
+        android:textSize="12sp"
+        android:layout_gravity="end"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.MaterialComponents.Button.TextButton"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="* 등록 버튼을 누르면 기존 서명이 삭제되고\n  새 서명으로 대체됩니다."
+        android:textSize="12sp"
+        android:textColor="@android:color/holo_orange_dark"/>
+
+</LinearLayout>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Banner Image Only -->
+    <ImageView
+        android:id="@+id/ivBannerImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:background="#E0E0E0"
+        android:contentDescription="배너 이미지"/>
+
+    <!-- Link indicator (shown when link exists) -->
+    <LinearLayout
+        android:id="@+id/layoutLinkIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="8dp"
+        android:background="@drawable/badge_pending"
+        android:padding="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@android:drawable/ic_menu_share"
+            android:contentDescription="링크"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="링크"
+            android:textSize="10sp"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="4dp"/>
+
+    </LinearLayout>
+
+</FrameLayout>

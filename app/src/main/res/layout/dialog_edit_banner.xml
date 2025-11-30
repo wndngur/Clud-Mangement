@@ -31,7 +31,7 @@
         android:layout_height="wrap_content"
         android:text="이미지 변경"
         android:layout_marginBottom="16dp"
-        style="@style/Widget.Material3.Button.OutlinedButton"/>
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 
     <!-- Title Input -->
     <com.google.android.material.textfield.TextInputLayout
@@ -39,7 +39,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:hint="배너 제목"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etBannerTitle"
@@ -56,7 +56,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
         android:hint="배너 설명"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etBannerDescription"
@@ -74,7 +74,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="링크 URL (선택)"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etBannerLink"

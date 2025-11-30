@@ -12,6 +12,9 @@
         <!-- Status bar color (semi-transparent) -->
         <item name="android:statusBarColor">#40000000</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
-        <!-- Customize your theme here. -->
+        <!-- Navigation bar - ensure content is not hidden -->
+        <item name="android:navigationBarColor">@android:color/white</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+        <item name="android:fitsSystemWindows">true</item>
     </style>
 </resources>

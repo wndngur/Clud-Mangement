@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Candle flames -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M16,8 Q14,5 16,2 Q18,5 16,8 Z"/>
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M24,6 Q22,3 24,0 Q26,3 24,6 Z"/>
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M32,8 Q30,5 32,2 Q34,5 32,8 Z"/>
+
+    <!-- Candles -->
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M15,8 L17,8 L17,14 L15,14 Z"/>
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M23,6 L25,6 L25,14 L23,14 Z"/>
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M31,8 L33,8 L33,14 L31,14 Z"/>
+
+    <!-- Cake top layer (frosting) -->
+    <path
+        android:fillColor="#F48FB1"
+        android:pathData="M8,14 L40,14 L40,22
+                         Q38,24 36,22 Q34,24 32,22 Q30,24 28,22
+                         Q26,24 24,22 Q22,24 20,22 Q18,24 16,22
+                         Q14,24 12,22 Q10,24 8,22 Z"/>
+
+    <!-- Cake middle layer -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:pathData="M8,22 L40,22 L40,32 L8,32 Z"/>
+
+    <!-- Cake bottom layer -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M6,32 L42,32 L42,42 L6,42 Z"/>
+
+    <!-- Cake stand/plate -->
+    <path
+        android:fillColor="#9E9E9E"
+        android:pathData="M4,42 L44,42 L44,46 L4,46 Z"/>
+
+    <!-- Decorations on cake -->
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M12,36 A2,2 0 1,1 12.01,36"/>
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M24,36 A2,2 0 1,1 24.01,36"/>
+    <path
+        android:fillColor="#E91E63"
+        android:pathData="M36,36 A2,2 0 1,1 36.01,36"/>
+
+</vector>

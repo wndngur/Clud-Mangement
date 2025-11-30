@@ -137,7 +137,7 @@
                 android:id="@+id/tilEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="16dp"
                 android:hint="이메일"
                 app:boxStrokeColor="?attr/colorPrimary"
                 app:hintTextColor="?attr/colorPrimary"
@@ -150,6 +150,55 @@
                     android:inputType="textEmailAddress"
                     android:textSize="16sp"/>
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Birthday Section (Optional) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="생일 (선택사항)"
+                android:textSize="14sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp"
+                android:gravity="center_vertical">
+
+                <Spinner
+                    android:id="@+id/spinnerBirthMonth"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/spinner_background"
+                    android:spinnerMode="dropdown"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="월"
+                    android:textSize="14sp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="16dp"/>
+
+                <Spinner
+                    android:id="@+id/spinnerBirthDay"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/spinner_background"
+                    android:spinnerMode="dropdown"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="일"
+                    android:textSize="14sp"
+                    android:layout_marginStart="8dp"/>
+
+            </LinearLayout>
 
             <!-- Privacy Agreement Checkbox -->
             <CheckBox
@@ -231,17 +280,54 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="48dp"
+            android:padding="32dp"
             android:gravity="center">
 
+            <!-- 체크 아이콘 -->
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@android:drawable/ic_dialog_info"
+                app:tint="#4CAF50"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- 동아리명 + 가입 신청 완료 메시지 -->
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tvApprovalMessage"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="가입승인중 입니다"
-                android:textSize="24sp"
+                android:text="(동아리명) 가입 신청이 완료 되었습니다"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="?attr/colorPrimary"
-                android:gravity="center"/>
+                android:textColor="@android:color/black"
+                android:gravity="center"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- 승인 대기 메시지 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="승인중이니 잠시만 기다리세요"
+                android:textSize="16sp"
+                android:textColor="@android:color/darker_gray"
+                android:gravity="center"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- 로딩 인디케이터 -->
+            <ProgressBar
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:indeterminate="true"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- 확인 버튼 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConfirmApproval"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="확인"
+                android:textSize="16sp"
+                app:cornerRadius="8dp"/>
 
         </LinearLayout>
 

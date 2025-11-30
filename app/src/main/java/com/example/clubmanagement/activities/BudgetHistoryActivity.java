@@ -29,6 +29,7 @@ import com.example.clubmanagement.models.BudgetTransaction;
 import com.example.clubmanagement.models.Club;
 import com.example.clubmanagement.models.UserData;
 import com.example.clubmanagement.utils.FirebaseManager;
+import com.example.clubmanagement.SettingsActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.mlkit.vision.common.InputImage;
@@ -114,7 +115,13 @@ public class BudgetHistoryActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
 
         ivBack.setOnClickListener(v -> finish());
-        fabAddExpense.setOnClickListener(v -> showAddExpenseDialog());
+        fabAddExpense.setOnClickListener(v -> {
+            if (isAdmin) {
+                showAddExpenseDialog();
+            } else {
+                Toast.makeText(this, "관리자만 거래를 추가할 수 있습니다", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setupImagePickerLauncher() {
@@ -145,31 +152,31 @@ public class BudgetHistoryActivity extends AppCompatActivity {
         adapter.setOnTransactionClickListener(transaction -> {
             showTransactionDetailDialog(transaction);
         });
+
+        adapter.setOnTransactionLongClickListener(transaction -> {
+            if (isAdmin) {
+                showEditDeleteDialog(transaction);
+            }
+        });
     }
 
     private void checkAdminStatus() {
-        firebaseManager.getUserData(firebaseManager.getCurrentUserId(), new FirebaseManager.UserDataCallback() {
-            @Override
-            public void onSuccess(UserData userData) {
-                if (userData != null) {
-                    boolean isSuperAdmin = userData.isSuperAdmin();
-                    boolean isThisClubAdmin = userData.isClubAdmin() &&
-                            userData.getClubId() != null &&
-                            userData.getClubId().equals(clubId);
+        // Check super admin mode from SharedPreferences
+        boolean isSuperAdminMode = SettingsActivity.isSuperAdminMode(this);
 
-                    isAdmin = isSuperAdmin || isThisClubAdmin;
+        // Check club admin mode from SharedPreferences
+        boolean isClubAdminMode = ClubSettingsActivity.isClubAdminMode(this);
 
-                    if (isAdmin) {
-                        fabAddExpense.setVisibility(View.VISIBLE);
-                    }
-                }
-            }
+        // If super admin mode is on, allow access
+        if (isSuperAdminMode) {
+            isAdmin = true;
+            return;
+        }
 
-            @Override
-            public void onFailure(Exception e) {
-                isAdmin = false;
-            }
-        });
+        // If club admin mode is on, allow access
+        if (isClubAdminMode) {
+            isAdmin = true;
+        }
     }
 
     private void loadData() {
@@ -304,14 +311,23 @@ public class BudgetHistoryActivity extends AppCompatActivity {
                         progressBar.setVisibility(View.GONE);
                         String recognizedText = text.getText();
 
+                        // 인식된 텍스트가 없는 경우
+                        if (recognizedText == null || recognizedText.trim().isEmpty()) {
+                            Toast.makeText(this, "텍스트를 인식하지 못했습니다. 다른 이미지를 시도해주세요.", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+
                         // Extract amount from receipt
                         long extractedAmount = extractAmountFromText(recognizedText);
 
                         if (extractedAmount > 0 && dialogAmountInput != null) {
                             dialogAmountInput.setText(String.valueOf(extractedAmount));
-                            Toast.makeText(this, "영수증에서 " + extractedAmount + "원 인식됨", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "영수증에서 " + String.format("%,d", extractedAmount) + "원 인식됨", Toast.LENGTH_SHORT).show();
                         } else {
-                            Toast.makeText(this, "금액을 인식하지 못했습니다. 직접 입력해주세요.", Toast.LENGTH_SHORT).show();
+                            // 인식은 됐지만 금액을 찾지 못한 경우 - 인식된 텍스트 일부 표시
+                            String preview = recognizedText.length() > 100 ?
+                                recognizedText.substring(0, 100) + "..." : recognizedText;
+                            Toast.makeText(this, "금액을 찾지 못했습니다.\n인식된 내용: " + preview, Toast.LENGTH_LONG).show();
                         }
                     })
                     .addOnFailureListener(e -> {
@@ -326,40 +342,94 @@ public class BudgetHistoryActivity extends AppCompatActivity {
     }
 
     private long extractAmountFromText(String text) {
-        // Common patterns in Korean receipts for total amount
-        // 합계, 총액, 결제금액, 총 결제, 카드결제, 받을금액 등
-        String[] keywords = {"합계", "총액", "결제금액", "총 결제", "카드결제", "받을금액", "판매금액", "TOTAL", "Total"};
+        // 텍스트 전처리 - 공백 정규화
+        text = text.replaceAll("\\s+", " ");
+
+        // 우선순위가 높은 키워드 (결제 총액 관련)
+        String[] highPriorityKeywords = {
+            "결제금액", "결제 금액", "총결제", "총 결제", "승인금액", "승인 금액",
+            "카드결제", "카드 결제", "실결제", "실 결제", "최종금액", "최종 금액",
+            "합계금액", "합계 금액", "총합계", "총 합계", "받을금액", "받을 금액",
+            "TOTAL", "Total", "total", "합 계", "합계"
+        };
+
+        // 일반 키워드
+        String[] normalKeywords = {
+            "총액", "총 액", "금액", "판매금액", "판매 금액", "매출", "청구금액",
+            "결제", "지불", "Payment", "Amount", "SUM", "Sum"
+        };
 
         String[] lines = text.split("\n");
 
-        for (String keyword : keywords) {
+        // 1단계: 우선순위 높은 키워드로 검색
+        for (String keyword : highPriorityKeywords) {
             for (String line : lines) {
                 if (line.contains(keyword)) {
-                    // Extract number from this line
                     long amount = extractNumberFromLine(line);
-                    if (amount > 0) {
+                    if (amount >= 100 && amount <= 100000000) {
                         return amount;
                     }
                 }
             }
         }
 
-        // If no keyword found, find the largest number (likely the total)
-        long maxAmount = 0;
-        Pattern pattern = Pattern.compile("[0-9,]+");
-
-        for (String line : lines) {
-            Matcher matcher = pattern.matcher(line);
-            while (matcher.find()) {
-                try {
-                    String numStr = matcher.group().replaceAll(",", "");
-                    long num = Long.parseLong(numStr);
-                    // Filter reasonable amounts (100 ~ 10,000,000)
-                    if (num >= 100 && num <= 10000000 && num > maxAmount) {
-                        maxAmount = num;
+        // 2단계: 일반 키워드로 검색
+        for (String keyword : normalKeywords) {
+            for (String line : lines) {
+                if (line.contains(keyword)) {
+                    long amount = extractNumberFromLine(line);
+                    if (amount >= 100 && amount <= 100000000) {
+                        return amount;
                     }
-                } catch (NumberFormatException ignored) {
                 }
+            }
+        }
+
+        // 3단계: "원" 앞의 숫자 찾기
+        Pattern wonPattern = Pattern.compile("([0-9,. ]+)\\s*원");
+        Matcher wonMatcher = wonPattern.matcher(text);
+        long maxWonAmount = 0;
+        while (wonMatcher.find()) {
+            try {
+                String numStr = wonMatcher.group(1).replaceAll("[,. ]", "");
+                long num = Long.parseLong(numStr);
+                if (num >= 100 && num <= 100000000 && num > maxWonAmount) {
+                    maxWonAmount = num;
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        if (maxWonAmount > 0) {
+            return maxWonAmount;
+        }
+
+        // 4단계: 가장 큰 숫자 찾기 (영수증 하단에 총액이 있는 경우가 많음)
+        long maxAmount = 0;
+        // 영수증 하단부터 검색 (총액이 보통 하단에 있음)
+        for (int i = lines.length - 1; i >= 0; i--) {
+            String line = lines[i];
+            long lineMax = extractNumberFromLine(line);
+            if (lineMax >= 1000 && lineMax <= 100000000 && lineMax > maxAmount) {
+                maxAmount = lineMax;
+            }
+        }
+
+        // 최소 금액 기준 (1000원 이상)
+        if (maxAmount >= 1000) {
+            return maxAmount;
+        }
+
+        // 5단계: 전체에서 가장 큰 숫자 (최후의 수단)
+        Pattern pattern = Pattern.compile("[0-9][0-9,. ]*[0-9]|[0-9]+");
+        Matcher matcher = pattern.matcher(text);
+        while (matcher.find()) {
+            try {
+                String numStr = matcher.group().replaceAll("[,. ]", "");
+                long num = Long.parseLong(numStr);
+                if (num >= 100 && num <= 100000000 && num > maxAmount) {
+                    maxAmount = num;
+                }
+            } catch (NumberFormatException ignored) {
             }
         }
 
@@ -367,13 +437,28 @@ public class BudgetHistoryActivity extends AppCompatActivity {
     }
 
     private long extractNumberFromLine(String line) {
-        Pattern pattern = Pattern.compile("[0-9,]+");
+        // "원" 기호 앞의 숫자 우선 추출
+        Pattern wonPattern = Pattern.compile("([0-9,. ]+)\\s*원");
+        Matcher wonMatcher = wonPattern.matcher(line);
+        if (wonMatcher.find()) {
+            try {
+                String numStr = wonMatcher.group(1).replaceAll("[,. ]", "");
+                long num = Long.parseLong(numStr);
+                if (num > 0) {
+                    return num;
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        // 일반 숫자 패턴 (쉼표, 점, 공백 포함 가능)
+        Pattern pattern = Pattern.compile("[0-9][0-9,. ]*[0-9]|[0-9]+");
         Matcher matcher = pattern.matcher(line);
 
         long maxNum = 0;
         while (matcher.find()) {
             try {
-                String numStr = matcher.group().replaceAll(",", "");
+                String numStr = matcher.group().replaceAll("[,. ]", "");
                 long num = Long.parseLong(numStr);
                 if (num > maxNum) {
                     maxNum = num;
@@ -506,6 +591,202 @@ public class BudgetHistoryActivity extends AppCompatActivity {
                 .setView(dialogView)
                 .setPositiveButton("확인", null)
                 .show();
+    }
+
+    private void showEditDeleteDialog(BudgetTransaction transaction) {
+        String[] options = {"수정", "삭제"};
+
+        new AlertDialog.Builder(this)
+                .setTitle("거래 관리")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        // 수정
+                        showEditTransactionDialog(transaction);
+                    } else {
+                        // 삭제
+                        confirmDeleteTransaction(transaction);
+                    }
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    private void showEditTransactionDialog(BudgetTransaction transaction) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_expense, null);
+
+        EditText etDescription = dialogView.findViewById(R.id.etDescription);
+        dialogAmountInput = dialogView.findViewById(R.id.etAmount);
+        RadioGroup rgType = dialogView.findViewById(R.id.rgTransactionType);
+        MaterialButton btnScanReceipt = dialogView.findViewById(R.id.btnScanReceipt);
+        dialogReceiptPreview = dialogView.findViewById(R.id.ivReceiptPreview);
+
+        // 기존 값 설정
+        etDescription.setText(transaction.getDescription());
+        dialogAmountInput.setText(String.valueOf(transaction.getAmount()));
+
+        if (transaction.isIncome()) {
+            rgType.check(R.id.rbIncome);
+        } else {
+            rgType.check(R.id.rbExpense);
+        }
+
+        // 기존 영수증 이미지 표시
+        if (transaction.getReceiptImageUrl() != null && !transaction.getReceiptImageUrl().isEmpty()) {
+            dialogReceiptPreview.setVisibility(View.VISIBLE);
+            Glide.with(this).load(transaction.getReceiptImageUrl()).into(dialogReceiptPreview);
+        }
+
+        selectedReceiptUri = null;
+
+        btnScanReceipt.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            imagePickerLauncher.launch(intent);
+        });
+
+        new AlertDialog.Builder(this)
+                .setTitle("거래 수정")
+                .setView(dialogView)
+                .setPositiveButton("저장", (dialog, which) -> {
+                    String description = etDescription.getText().toString().trim();
+                    String amountStr = dialogAmountInput.getText().toString().trim();
+                    int selectedTypeId = rgType.getCheckedRadioButtonId();
+
+                    if (description.isEmpty()) {
+                        Toast.makeText(this, "내역을 입력해주세요", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    if (amountStr.isEmpty()) {
+                        Toast.makeText(this, "금액을 입력해주세요", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    try {
+                        long newAmount = Long.parseLong(amountStr.replaceAll("[^0-9]", ""));
+                        String newType = (selectedTypeId == R.id.rbIncome) ?
+                                BudgetTransaction.TYPE_INCOME : BudgetTransaction.TYPE_EXPENSE;
+
+                        updateTransaction(transaction, newType, newAmount, description);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, "올바른 금액을 입력해주세요", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    private void updateTransaction(BudgetTransaction transaction, String newType, long newAmount, String newDescription) {
+        if (currentClub == null) {
+            Toast.makeText(this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        progressBar.setVisibility(View.VISIBLE);
+
+        // 잔액 재계산
+        long oldEffect = transaction.isExpense() ? -transaction.getAmount() : transaction.getAmount();
+        long newEffect = BudgetTransaction.TYPE_EXPENSE.equals(newType) ? -newAmount : newAmount;
+        long balanceDiff = newEffect - oldEffect;
+        long newClubBalance = currentClub.getCurrentBudget() + balanceDiff;
+
+        if (newClubBalance < 0) {
+            progressBar.setVisibility(View.GONE);
+            Toast.makeText(this, "잔액이 부족합니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 거래 정보 업데이트
+        transaction.setType(newType);
+        transaction.setAmount(newAmount);
+        transaction.setDescription(newDescription);
+        transaction.setBalanceAfter(newClubBalance);
+
+        // 새 영수증 이미지가 있으면 업로드
+        if (selectedReceiptUri != null) {
+            try {
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedReceiptUri);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                byte[] imageData = baos.toByteArray();
+
+                firebaseManager.uploadReceiptImage(clubId, imageData, new FirebaseManager.SignatureCallback() {
+                    @Override
+                    public void onSuccess(String downloadUrl) {
+                        transaction.setReceiptImageUrl(downloadUrl);
+                        saveUpdatedTransaction(transaction, newClubBalance);
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        saveUpdatedTransaction(transaction, newClubBalance);
+                    }
+                });
+            } catch (IOException e) {
+                saveUpdatedTransaction(transaction, newClubBalance);
+            }
+        } else {
+            saveUpdatedTransaction(transaction, newClubBalance);
+        }
+    }
+
+    private void saveUpdatedTransaction(BudgetTransaction transaction, long newClubBalance) {
+        firebaseManager.updateBudgetTransaction(transaction, newClubBalance, new FirebaseManager.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(BudgetHistoryActivity.this, "수정 완료", Toast.LENGTH_SHORT).show();
+
+                currentClub.setCurrentBudget(newClubBalance);
+                updateSummaryUI();
+                loadTransactions();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(BudgetHistoryActivity.this, "수정 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void confirmDeleteTransaction(BudgetTransaction transaction) {
+        new AlertDialog.Builder(this)
+                .setTitle("거래 삭제")
+                .setMessage("이 거래를 삭제하시겠습니까?\n삭제 후에는 되돌릴 수 없습니다.")
+                .setPositiveButton("삭제", (dialog, which) -> deleteTransaction(transaction))
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    private void deleteTransaction(BudgetTransaction transaction) {
+        if (currentClub == null) {
+            Toast.makeText(this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        progressBar.setVisibility(View.VISIBLE);
+
+        // 잔액 복원
+        long balanceAdjustment = transaction.isExpense() ? transaction.getAmount() : -transaction.getAmount();
+        long newClubBalance = currentClub.getCurrentBudget() + balanceAdjustment;
+
+        firebaseManager.deleteBudgetTransaction(clubId, transaction.getId(), newClubBalance, new FirebaseManager.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(BudgetHistoryActivity.this, "삭제 완료", Toast.LENGTH_SHORT).show();
+
+                currentClub.setCurrentBudget(newClubBalance);
+                updateSummaryUI();
+                loadTransactions();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(BudgetHistoryActivity.this, "삭제 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override

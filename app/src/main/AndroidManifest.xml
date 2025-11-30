@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28"
         tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <application
         android:allowBackup="true"
@@ -21,15 +23,56 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ClubManagement">
 
-        <!-- Main Activity (NEW) -->
+        <!-- Login Activity -->
         <activity
-            android:name=".MainActivityNew"
-            android:exported="true">
+            android:name=".LoginActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Login Settings Activity -->
+        <activity
+            android:name=".LoginSettingsActivity"
+            android:exported="false"
+            android:label="로그인 설정"
+            android:parentActivityName=".LoginActivity"/>
+
+        <!-- Admin Login Activity -->
+        <activity
+            android:name=".AdminLoginActivity"
+            android:exported="false"
+            android:label="관리자 로그인"
+            android:parentActivityName=".LoginSettingsActivity"/>
+
+        <!-- Admin Sign Up Activity -->
+        <activity
+            android:name=".AdminSignUpActivity"
+            android:exported="false"
+            android:label="관리자 회원가입"
+            android:parentActivityName=".AdminLoginActivity"/>
+
+        <!-- Sign Up Activity -->
+        <activity
+            android:name=".SignUpActivity"
+            android:exported="false"
+            android:label="회원가입"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".LoginActivity"/>
+
+        <!-- Admin Main Activity -->
+        <activity
+            android:name=".AdminMainActivity"
+            android:exported="false"
+            android:label="관리자 메인"/>
+
+        <!-- Main Activity (NEW) -->
+        <activity
+            android:name=".MainActivityNew"
+            android:exported="false"/>
 
         <!-- Settings Activity (Main) -->
         <activity
@@ -55,7 +98,8 @@
         <activity
             android:name=".activities.MemberRegistrationActivity"
             android:exported="false"
-            android:label="회원 가입"/>
+            android:label="회원 가입"
+            android:windowSoftInputMode="adjustResize"/>
 
         <!-- Club Main Activity -->
         <activity
@@ -93,7 +137,52 @@
             android:name=".activities.BudgetHistoryActivity"
             android:exported="false"
             android:label="공금 내역"
+            android:windowSoftInputMode="adjustResize"
             android:parentActivityName=".activities.ClubMainActivity"/>
+
+        <!-- Carousel Edit Activity -->
+        <activity
+            android:name=".activities.CarouselEditActivity"
+            android:exported="false"
+            android:label="포스터 사진변경"
+            android:parentActivityName=".activities.ClubSettingsActivity"/>
+
+        <!-- Club Description Edit Activity -->
+        <activity
+            android:name=".activities.ClubDescriptionEditActivity"
+            android:exported="false"
+            android:label="동아리 설명 수정"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.ClubSettingsActivity"/>
+
+        <!-- Member Management Activity -->
+        <activity
+            android:name=".activities.MemberManagementActivity"
+            android:exported="false"
+            android:label="명단 관리"
+            android:parentActivityName=".activities.ClubSettingsActivity"/>
+
+        <!-- Member List Activity (일반 사용자용) -->
+        <activity
+            android:name=".activities.MemberListActivity"
+            android:exported="false"
+            android:label="부원 명단"
+            android:parentActivityName=".activities.ClubMainActivity"/>
+
+        <!-- Central Club Applications Activity (최고 관리자용) -->
+        <activity
+            android:name=".activities.CentralClubApplicationsActivity"
+            android:exported="false"
+            android:label="중앙동아리 신청 명단"
+            android:parentActivityName=".SettingsActivity"/>
+
+        <!-- Club Info Edit Activity -->
+        <activity
+            android:name=".activities.ClubInfoEditActivity"
+            android:exported="false"
+            android:label="동아리 정보 수정"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.ClubSettingsActivity"/>
 
         <!-- Super Admin Settings Activity -->
         <activity
@@ -101,6 +190,42 @@
             android:exported="false"
             android:label="최고 관리자 설정"
             android:parentActivityName=".activities.DetailActivity"/>
+
+        <!-- Edit Requests Activity (동아리 관리자용 수정 요청 확인) -->
+        <activity
+            android:name=".activities.EditRequestsActivity"
+            android:exported="false"
+            android:label="수정 요청 목록"
+            android:parentActivityName=".activities.ClubSettingsActivity"/>
+
+        <!-- Central Club Applications Activity (최고 관리자용 중앙동아리 신청 목록) -->
+        <activity
+            android:name=".activities.CentralApplicationsActivity"
+            android:exported="false"
+            android:label="중앙동아리 신청 목록"
+            android:parentActivityName=".SettingsActivity"/>
+
+        <!-- Club Establish Activity (일반동아리 설립 신청) -->
+        <activity
+            android:name=".activities.ClubEstablishActivity"
+            android:exported="false"
+            android:label="동아리 설립 신청"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".SettingsActivity"/>
+
+        <!-- Club Approval List Activity (최고 관리자용 일반동아리 설립 승인) -->
+        <activity
+            android:name=".activities.ClubApprovalListActivity"
+            android:exported="false"
+            android:label="일반동아리 설립 승인"
+            android:parentActivityName=".SettingsActivity"/>
+
+        <!-- Club Delete Activity (최고 관리자용 동아리 삭제) -->
+        <activity
+            android:name=".activities.ClubDeleteActivity"
+            android:exported="false"
+            android:label="동아리 삭제"
+            android:parentActivityName=".SettingsActivity"/>
 
         <!-- Old Main Activity (Backup) -->
         <activity
@@ -123,6 +248,49 @@
             android:name=".activities.DocumentGenerateActivity"
             android:exported="false"
             android:label="문서 생성" />
+
+        <!-- Signature Activity (서명 캡처) -->
+        <activity
+            android:name=".activities.SignatureActivity"
+            android:exported="false"
+            android:label="서명" />
+
+        <!-- PDF Generation Activity (PDF 생성) -->
+        <activity
+            android:name=".activities.PdfGenerationActivity"
+            android:exported="false"
+            android:label="신청서 PDF 생성"
+            android:parentActivityName=".activities.ClubSettingsActivity"/>
+
+        <!-- Notice List Activity (동아리 공지 목록) -->
+        <activity
+            android:name=".activities.NoticeListActivity"
+            android:exported="false"
+            android:label="공지사항"
+            android:parentActivityName=".activities.ClubMainActivity"/>
+
+        <!-- Notice Detail Activity (공지 상세) -->
+        <activity
+            android:name=".activities.NoticeDetailActivity"
+            android:exported="false"
+            android:label="공지 상세"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.NoticeListActivity"/>
+
+        <!-- Notice Write Activity (공지 작성/수정) -->
+        <activity
+            android:name=".activities.NoticeWriteActivity"
+            android:exported="false"
+            android:label="공지 작성"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.NoticeListActivity"/>
+
+        <!-- Notification List Activity (알림 목록) -->
+        <activity
+            android:name=".activities.NotificationListActivity"
+            android:exported="false"
+            android:label="알림"
+            android:parentActivityName=".activities.ClubMainActivity"/>
 
         <!-- FileProvider for sharing files -->
         <provider
