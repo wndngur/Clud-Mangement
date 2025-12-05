@@ -25,12 +25,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
 import com.example.clubmanagement.activities.CentralApplicationsActivity;
+import com.example.clubmanagement.activities.ChatActivity;
 import com.example.clubmanagement.activities.ClubApprovalListActivity;
 import com.example.clubmanagement.activities.ClubDeleteActivity;
 import com.example.clubmanagement.activities.ClubEstablishActivity;
 import com.example.clubmanagement.activities.ClubListActivity;
 import com.example.clubmanagement.activities.ClubMainActivity;
 import com.example.clubmanagement.activities.ClubRecommendActivity;
+import com.example.clubmanagement.activities.DemoteCentralClubActivity;
 import com.example.clubmanagement.models.User;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.example.clubmanagement.utils.TestDataInjector;
@@ -65,6 +67,8 @@ public class SettingsActivity extends BaseActivity {
     private MaterialCardView cardClubApproval;
     private MaterialCardView cardClubDelete;
     private MaterialButton btnClubDelete;
+    private MaterialCardView cardClubDemote;
+    private MaterialButton btnClubDemote;
     private MaterialCardView cardMemberLimit;
     private MaterialButton btnEditMemberLimit;
     private TextView tvCurrentRegisterLimit;
@@ -135,6 +139,8 @@ public class SettingsActivity extends BaseActivity {
         cardClubApproval = findViewById(R.id.cardClubApproval);
         cardClubDelete = findViewById(R.id.cardClubDelete);
         btnClubDelete = findViewById(R.id.btnClubDelete);
+        cardClubDemote = findViewById(R.id.cardClubDemote);
+        btnClubDemote = findViewById(R.id.btnClubDemote);
         cardMemberLimit = findViewById(R.id.cardMemberLimit);
         btnEditMemberLimit = findViewById(R.id.btnEditMemberLimit);
         tvCurrentRegisterLimit = findViewById(R.id.tvCurrentRegisterLimit);
@@ -228,6 +234,7 @@ public class SettingsActivity extends BaseActivity {
         cardGlobalNotice.setVisibility(isSuperAdmin ? View.VISIBLE : View.GONE);
         cardClubApproval.setVisibility(isSuperAdmin ? View.VISIBLE : View.GONE);
         cardClubDelete.setVisibility(isSuperAdmin ? View.VISIBLE : View.GONE);
+        cardClubDemote.setVisibility(isSuperAdmin ? View.VISIBLE : View.GONE);
         cardMemberLimit.setVisibility(isSuperAdmin ? View.VISIBLE : View.GONE);
         cardBannerManagement.setVisibility(isSuperAdmin ? View.VISIBLE : View.GONE);
         cardTestData.setVisibility(isSuperAdmin ? View.VISIBLE : View.GONE);
@@ -773,6 +780,12 @@ public class SettingsActivity extends BaseActivity {
             startActivity(intent);
         });
 
+        // 동아리 강등 버튼 (최고 관리자용)
+        btnClubDemote.setOnClickListener(v -> {
+            Intent intent = new Intent(SettingsActivity.this, DemoteCentralClubActivity.class);
+            startActivity(intent);
+        });
+
         // 인원 제한 수정 버튼 (최고 관리자용)
         btnEditMemberLimit.setOnClickListener(v -> showEditMemberLimitDialog());
 
@@ -843,6 +856,11 @@ public class SettingsActivity extends BaseActivity {
                 } else {
                     intent = new Intent(this, MainActivityNew.class);
                 }
+                startActivity(intent);
+                finish();
+                return true;
+            } else if (itemId == R.id.nav_chat) {
+                Intent intent = new Intent(this, ChatActivity.class);
                 startActivity(intent);
                 finish();
                 return true;

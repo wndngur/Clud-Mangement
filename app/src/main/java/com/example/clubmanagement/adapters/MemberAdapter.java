@@ -35,6 +35,7 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
         void onExpelMember(Member member);
         void onApprove(Member member);
         void onReject(Member member);
+        void onSetRole(Member member);
     }
 
     public MemberAdapter(List<Member> members, int listType, OnMemberActionListener listener) {
@@ -138,6 +139,7 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
                 } else {
                     popup.getMenu().add(0, 2, 0, "관리자 권한 부여");
                 }
+                popup.getMenu().add(0, 4, 0, "직급 설정");
                 popup.getMenu().add(0, 3, 0, "동아리 퇴출");
 
                 popup.setOnMenuItemClickListener(item -> {
@@ -155,6 +157,11 @@ public class MemberAdapter extends RecyclerView.Adapter<MemberAdapter.MemberView
                         case 3:
                             if (listener != null) {
                                 listener.onExpelMember(member);
+                            }
+                            return true;
+                        case 4:
+                            if (listener != null) {
+                                listener.onSetRole(member);
                             }
                             return true;
                     }

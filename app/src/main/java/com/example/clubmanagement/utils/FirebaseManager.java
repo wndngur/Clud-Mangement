@@ -9,6 +9,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -410,11 +411,14 @@ public class FirebaseManager {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     java.util.List<com.example.clubmanagement.models.CarouselItem> items = new java.util.ArrayList<>();
+                    java.util.List<com.google.firebase.firestore.DocumentSnapshot> carouselDocs = new java.util.ArrayList<>();
+
                     for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
                         com.example.clubmanagement.models.CarouselItem item = doc.toObject(com.example.clubmanagement.models.CarouselItem.class);
                         if (item != null && item.getPosition() >= 0 && item.getPosition() <= 2) {
                             item.setId(doc.getId());
                             items.add(item);
+                            carouselDocs.add(doc);
                         }
                     }
 
@@ -422,15 +426,125 @@ public class FirebaseManager {
                     if (items.isEmpty()) {
                         loadCentralClubsAsCarousel(callback);
                     } else {
-                        // 클라이언트 측 정렬 (position 오름차순)
-                        java.util.Collections.sort(items, (i1, i2) -> Integer.compare(i1.getPosition(), i2.getPosition()));
-                        callback.onSuccess(items);
+                        // 강등된 동아리의 캐러셀 아이템 정리
+                        cleanupDemotedClubCarouselItems(items, carouselDocs, callback);
                     }
                 })
                 .addOnFailureListener(e -> {
                     // 실패 시 중앙동아리에서 직접 로드
                     loadCentralClubsAsCarousel(callback);
                 });
+    }
+
+    /**
+     * 강등된 동아리의 캐러셀 아이템을 정리하고 유효한 아이템만 반환
+     */
+    private void cleanupDemotedClubCarouselItems(
+            java.util.List<com.example.clubmanagement.models.CarouselItem> items,
+            java.util.List<com.google.firebase.firestore.DocumentSnapshot> carouselDocs,
+            CarouselListCallback callback) {
+
+        java.util.List<com.example.clubmanagement.models.CarouselItem> validItems = new java.util.ArrayList<>();
+        java.util.List<com.google.firebase.firestore.DocumentSnapshot> docsToDelete = new java.util.ArrayList<>();
+
+        // clubId가 있는 아이템들의 동아리 정보 확인
+        java.util.List<String> clubIdsToCheck = new java.util.ArrayList<>();
+        for (com.example.clubmanagement.models.CarouselItem item : items) {
+            if (item.getClubId() != null && !item.getClubId().isEmpty()) {
+                clubIdsToCheck.add(item.getClubId());
+            }
+        }
+
+        if (clubIdsToCheck.isEmpty()) {
+            // clubId가 없는 아이템만 있으면 그대로 반환
+            java.util.Collections.sort(items, (i1, i2) -> Integer.compare(i1.getPosition(), i2.getPosition()));
+            callback.onSuccess(items);
+            return;
+        }
+
+        // 모든 관련 동아리 정보를 한 번에 조회
+        final int[] checkedCount = {0};
+        final int totalToCheck = clubIdsToCheck.size();
+
+        for (int i = 0; i < items.size(); i++) {
+            com.example.clubmanagement.models.CarouselItem item = items.get(i);
+            com.google.firebase.firestore.DocumentSnapshot carouselDoc = carouselDocs.get(i);
+
+            if (item.getClubId() == null || item.getClubId().isEmpty()) {
+                // clubId가 없으면 유효한 것으로 간주
+                validItems.add(item);
+                continue;
+            }
+
+            final int index = i;
+            db.collection("clubs")
+                    .document(item.getClubId())
+                    .get()
+                    .addOnSuccessListener(clubDoc -> {
+                        synchronized (validItems) {
+                            if (clubDoc.exists()) {
+                                Boolean isCentralClub = clubDoc.getBoolean("centralClub");
+                                if (isCentralClub != null && isCentralClub) {
+                                    // 중앙동아리이면 유효한 아이템
+                                    validItems.add(items.get(index));
+                                } else {
+                                    // 강등된 동아리 - 삭제 대상
+                                    docsToDelete.add(carouselDocs.get(index));
+                                }
+                            } else {
+                                // 동아리가 존재하지 않음 - 삭제 대상
+                                docsToDelete.add(carouselDocs.get(index));
+                            }
+
+                            checkedCount[0]++;
+                            if (checkedCount[0] == totalToCheck) {
+                                // 모든 검사 완료
+                                finishCarouselCleanup(validItems, docsToDelete, callback);
+                            }
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        synchronized (validItems) {
+                            // 조회 실패 시 일단 유효한 것으로 간주
+                            validItems.add(items.get(index));
+
+                            checkedCount[0]++;
+                            if (checkedCount[0] == totalToCheck) {
+                                finishCarouselCleanup(validItems, docsToDelete, callback);
+                            }
+                        }
+                    });
+        }
+    }
+
+    /**
+     * 캐러셀 정리 완료 - 삭제할 아이템 삭제하고 유효한 아이템 반환
+     */
+    private void finishCarouselCleanup(
+            java.util.List<com.example.clubmanagement.models.CarouselItem> validItems,
+            java.util.List<com.google.firebase.firestore.DocumentSnapshot> docsToDelete,
+            CarouselListCallback callback) {
+
+        // 삭제할 캐러셀 아이템이 있으면 삭제
+        if (!docsToDelete.isEmpty()) {
+            WriteBatch batch = db.batch();
+            for (com.google.firebase.firestore.DocumentSnapshot doc : docsToDelete) {
+                batch.delete(doc.getReference());
+            }
+            batch.commit()
+                    .addOnSuccessListener(aVoid -> {
+                        // 삭제 성공
+                        Log.d(TAG, "Cleaned up " + docsToDelete.size() + " demoted club carousel items");
+                    })
+                    .addOnFailureListener(e -> {
+                        // 삭제 실패해도 무시
+                        Log.e(TAG, "Failed to cleanup carousel items", e);
+                    });
+        }
+
+        // 유효한 아이템 정렬 후 반환
+        java.util.Collections.sort(validItems, (i1, i2) -> Integer.compare(i1.getPosition(), i2.getPosition()));
+        callback.onSuccess(validItems);
     }
 
     /**
@@ -1327,7 +1441,21 @@ public class FirebaseManager {
                                 db.collection("clubs")
                                         .document(clubId)
                                         .update("memberCount", com.google.firebase.firestore.FieldValue.increment(1))
-                                        .addOnSuccessListener(aVoid2 -> callback.onSuccess())
+                                        .addOnSuccessListener(aVoid2 -> {
+                                            // 단체 채팅방에 자동 참여
+                                            joinGroupChatRoom(clubId, new SimpleCallback() {
+                                                @Override
+                                                public void onSuccess() {
+                                                    callback.onSuccess();
+                                                }
+
+                                                @Override
+                                                public void onFailure(Exception e) {
+                                                    // 채팅방 참여 실패해도 가입은 성공 처리
+                                                    callback.onSuccess();
+                                                }
+                                            });
+                                        })
                                         .addOnFailureListener(e -> callback.onSuccess());
                             })
                             .addOnFailureListener(e -> callback.onSuccess());
@@ -1647,7 +1775,49 @@ public class FirebaseManager {
         db.collection("clubs")
                 .document(clubId)
                 .update(updates)
-                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnSuccessListener(aVoid -> {
+                    // 캐러셀에서도 해당 동아리 제거
+                    removeCarouselItemByClubId(clubId, new SimpleCallback() {
+                        @Override
+                        public void onSuccess() {
+                            callback.onSuccess();
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            // 캐러셀 삭제 실패해도 강등은 성공으로 처리
+                            callback.onSuccess();
+                        }
+                    });
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * Remove carousel item by club ID (캐러셀에서 clubId로 검색하여 삭제)
+     */
+    private void removeCarouselItemByClubId(String clubId, SimpleCallback callback) {
+        // clubId 필드로 캐러셀 아이템 검색
+        db.collection("carousel_items")
+                .whereEqualTo("clubId", clubId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        // 캐러셀 아이템이 없으면 성공으로 처리
+                        callback.onSuccess();
+                        return;
+                    }
+
+                    // 찾은 모든 캐러셀 아이템 삭제
+                    WriteBatch batch = db.batch();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot) {
+                        batch.delete(doc.getReference());
+                    }
+
+                    batch.commit()
+                            .addOnSuccessListener(aVoid -> callback.onSuccess())
+                            .addOnFailureListener(callback::onFailure);
+                })
                 .addOnFailureListener(callback::onFailure);
     }
 
@@ -1705,6 +1875,26 @@ public class FirebaseManager {
         db.collection("users")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
+                    // userId -> name 매핑 생성
+                    java.util.Map<String, String> userIdToName = new java.util.HashMap<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                        String userName = doc.getString("name");
+                        if (userName != null && !userName.isEmpty()) {
+                            userIdToName.put(doc.getId(), userName);
+                        }
+                    }
+
+                    // 기존 멤버들의 이름이 이메일이면 실제 이름으로 업데이트
+                    for (com.example.clubmanagement.models.Member member : existingMembers) {
+                        String currentName = member.getName();
+                        if (currentName == null || currentName.contains("@")) {
+                            String actualName = userIdToName.get(member.getUserId());
+                            if (actualName != null && !actualName.isEmpty()) {
+                                member.setName(actualName);
+                            }
+                        }
+                    }
+
                     for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
                         String odUserId = doc.getId();
 
@@ -3520,7 +3710,21 @@ public class FirebaseManager {
                     db.collection("clubs").document(clubId)
                             .collection("members").document(odUserId)
                             .set(memberData)
-                            .addOnSuccessListener(aVoid -> callback.onSuccess())
+                            .addOnSuccessListener(aVoid -> {
+                                // 단체 채팅방에 자동 참여
+                                joinGroupChatRoom(clubId, new SimpleCallback() {
+                                    @Override
+                                    public void onSuccess() {
+                                        callback.onSuccess();
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        // 채팅방 참여 실패해도 가입은 성공 처리
+                                        callback.onSuccess();
+                                    }
+                                });
+                            })
                             .addOnFailureListener(callback::onFailure);
                 })
                 .addOnFailureListener(e -> {
@@ -3541,7 +3745,20 @@ public class FirebaseManager {
                     db.collection("clubs").document(clubId)
                             .collection("members").document(odUserId)
                             .set(memberData)
-                            .addOnSuccessListener(aVoid -> callback.onSuccess())
+                            .addOnSuccessListener(aVoid -> {
+                                // 단체 채팅방에 자동 참여
+                                joinGroupChatRoom(clubId, new SimpleCallback() {
+                                    @Override
+                                    public void onSuccess() {
+                                        callback.onSuccess();
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception ex) {
+                                        callback.onSuccess();
+                                    }
+                                });
+                            })
                             .addOnFailureListener(callback::onFailure);
                 });
     }
@@ -4320,7 +4537,21 @@ public class FirebaseManager {
                                                     .collection("membershipApplications")
                                                     .document(applicationId)
                                                     .update(updates)
-                                                    .addOnSuccessListener(aVoid2 -> callback.onSuccess())
+                                                    .addOnSuccessListener(aVoid2 -> {
+                                                        // 단체 채팅방에 사용자 추가
+                                                        addUserToGroupChatRoom(clubId, clubName, userId, new SimpleCallback() {
+                                                            @Override
+                                                            public void onSuccess() {
+                                                                callback.onSuccess();
+                                                            }
+
+                                                            @Override
+                                                            public void onFailure(Exception e) {
+                                                                // 채팅방 추가 실패해도 가입 승인은 성공
+                                                                callback.onSuccess();
+                                                            }
+                                                        });
+                                                    })
                                                     .addOnFailureListener(callback::onFailure);
                                         })
                                         .addOnFailureListener(callback::onFailure);
@@ -4656,5 +4887,709 @@ public class FirebaseManager {
                 .set(updates, com.google.firebase.firestore.SetOptions.merge())
                 .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(e -> callback.onFailure(e));
+    }
+
+    // ========================================
+    // ChatRoom Methods
+    // ========================================
+
+    public interface ChatRoomCallback {
+        void onSuccess(com.example.clubmanagement.models.ChatRoom chatRoom);
+        void onFailure(Exception e);
+    }
+
+    public interface ChatRoomsCallback {
+        void onSuccess(java.util.List<com.example.clubmanagement.models.ChatRoom> chatRooms);
+        void onFailure(Exception e);
+    }
+
+    /**
+     * 채팅방 생성 또는 기존 채팅방 반환
+     */
+    public void createOrGetChatRoom(String partnerUserId, String partnerName, String partnerRole, String clubId, String clubName, ChatRoomCallback callback) {
+        String currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onFailure(new Exception("로그인이 필요합니다"));
+            return;
+        }
+
+        // 디버그 로그
+        android.util.Log.d("FirebaseManager", "createOrGetChatRoom - currentUserId: " + currentUserId + ", partnerUserId: " + partnerUserId + ", partnerName: " + partnerName);
+
+        if (partnerUserId == null || partnerUserId.isEmpty()) {
+            callback.onFailure(new Exception("상대방 ID가 없습니다"));
+            return;
+        }
+
+        // 채팅방 ID 생성 (두 사용자 ID를 정렬하여 항상 같은 ID 생성)
+        String chatRoomId;
+        if (currentUserId.compareTo(partnerUserId) < 0) {
+            chatRoomId = currentUserId + "_" + partnerUserId + "_" + clubId;
+        } else {
+            chatRoomId = partnerUserId + "_" + currentUserId + "_" + clubId;
+        }
+
+        // 기존 채팅방 확인
+        db.collection("chatRooms")
+                .document(chatRoomId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // 기존 채팅방이 있는 경우
+                        java.util.List<String> participants = (java.util.List<String>) documentSnapshot.get("participants");
+                        java.util.Map<String, Object> user1 = (java.util.Map<String, Object>) documentSnapshot.get("user1");
+                        java.util.Map<String, Object> user2 = (java.util.Map<String, Object>) documentSnapshot.get("user2");
+
+                        // 업데이트가 필요한지 확인
+                        boolean needsUpdate = (participants == null || !participants.contains(currentUserId) || !participants.contains(partnerUserId));
+                        boolean needsUserInfo = (user1 == null || user2 == null);
+                        String leftUserId = documentSnapshot.getString("leftUserId");
+                        boolean needsClearLeftUser = (leftUserId != null && !leftUserId.isEmpty());
+
+                        if (needsUpdate || needsUserInfo || needsClearLeftUser) {
+                            // 현재 사용자 정보 가져오기
+                            getCurrentUser(new UserCallback() {
+                                @Override
+                                public void onSuccess(com.example.clubmanagement.models.User currentUser) {
+                                    String currentUserName = currentUser != null ? currentUser.getName() : "알 수 없음";
+
+                                    getMemberRole(clubId, currentUserId, new RoleCallback() {
+                                        @Override
+                                        public void onSuccess(String currentUserRole) {
+                                            java.util.Map<String, Object> updateData = new java.util.HashMap<>();
+                                            updateData.put("participants", com.google.firebase.firestore.FieldValue.arrayUnion(currentUserId, partnerUserId));
+                                            updateData.put("leftUserId", com.google.firebase.firestore.FieldValue.delete());
+
+                                            // user1/user2 정보가 없으면 추가
+                                            if (needsUserInfo) {
+                                                java.util.Map<String, Object> user1Info = new java.util.HashMap<>();
+                                                user1Info.put("userId", currentUserId);
+                                                user1Info.put("name", currentUserName);
+                                                user1Info.put("role", currentUserRole != null ? currentUserRole : "회원");
+                                                updateData.put("user1", user1Info);
+
+                                                java.util.Map<String, Object> user2Info = new java.util.HashMap<>();
+                                                user2Info.put("userId", partnerUserId);
+                                                user2Info.put("name", partnerName);
+                                                user2Info.put("role", partnerRole != null ? partnerRole : "회원");
+                                                updateData.put("user2", user2Info);
+                                            }
+
+                                            db.collection("chatRooms")
+                                                    .document(chatRoomId)
+                                                    .update(updateData)
+                                                    .addOnSuccessListener(aVoid -> {
+                                                        com.example.clubmanagement.models.ChatRoom chatRoom = new com.example.clubmanagement.models.ChatRoom(
+                                                                chatRoomId, partnerUserId, partnerName, partnerRole, clubId, clubName);
+                                                        callback.onSuccess(chatRoom);
+                                                    })
+                                                    .addOnFailureListener(callback::onFailure);
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            // 직급 조회 실패해도 업데이트 진행
+                                            java.util.Map<String, Object> updateData = new java.util.HashMap<>();
+                                            updateData.put("participants", com.google.firebase.firestore.FieldValue.arrayUnion(currentUserId, partnerUserId));
+                                            updateData.put("leftUserId", com.google.firebase.firestore.FieldValue.delete());
+
+                                            if (needsUserInfo) {
+                                                java.util.Map<String, Object> user1Info = new java.util.HashMap<>();
+                                                user1Info.put("userId", currentUserId);
+                                                user1Info.put("name", currentUserName);
+                                                user1Info.put("role", "회원");
+                                                updateData.put("user1", user1Info);
+
+                                                java.util.Map<String, Object> user2Info = new java.util.HashMap<>();
+                                                user2Info.put("userId", partnerUserId);
+                                                user2Info.put("name", partnerName);
+                                                user2Info.put("role", partnerRole != null ? partnerRole : "회원");
+                                                updateData.put("user2", user2Info);
+                                            }
+
+                                            db.collection("chatRooms")
+                                                    .document(chatRoomId)
+                                                    .update(updateData)
+                                                    .addOnSuccessListener(aVoid -> {
+                                                        com.example.clubmanagement.models.ChatRoom chatRoom = new com.example.clubmanagement.models.ChatRoom(
+                                                                chatRoomId, partnerUserId, partnerName, partnerRole, clubId, clubName);
+                                                        callback.onSuccess(chatRoom);
+                                                    })
+                                                    .addOnFailureListener(callback::onFailure);
+                                        }
+                                    });
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    callback.onFailure(new Exception("사용자 정보를 가져올 수 없습니다"));
+                                }
+                            });
+                        } else {
+                            // 이미 participants에 있고 user 정보도 있으면 그냥 반환
+                            com.example.clubmanagement.models.ChatRoom chatRoom = new com.example.clubmanagement.models.ChatRoom(
+                                    chatRoomId, partnerUserId, partnerName, partnerRole, clubId, clubName);
+                            callback.onSuccess(chatRoom);
+                        }
+                    } else {
+                        // 현재 사용자 정보 가져오기
+                        getCurrentUser(new UserCallback() {
+                            @Override
+                            public void onSuccess(com.example.clubmanagement.models.User currentUser) {
+                                String currentUserName = currentUser != null ? currentUser.getName() : "알 수 없음";
+
+                                // 현재 사용자의 직급 가져오기
+                                getMemberRole(clubId, currentUserId, new RoleCallback() {
+                                    @Override
+                                    public void onSuccess(String currentUserRole) {
+                                        // 새 채팅방 생성
+                                        com.example.clubmanagement.models.ChatRoom newChatRoom = new com.example.clubmanagement.models.ChatRoom(
+                                                chatRoomId, partnerUserId, partnerName, partnerRole, clubId, clubName);
+
+                                        java.util.Map<String, Object> chatRoomData = new java.util.HashMap<>();
+                                        chatRoomData.put("chatRoomId", chatRoomId);
+                                        chatRoomData.put("clubId", clubId);
+                                        chatRoomData.put("clubName", clubName);
+                                        chatRoomData.put("lastMessage", "");
+                                        chatRoomData.put("lastMessageTime", System.currentTimeMillis());
+                                        chatRoomData.put("unreadCount", 0);
+                                        chatRoomData.put("notificationEnabled", true);
+                                        chatRoomData.put("leftUserId", null);
+                                        chatRoomData.put("participants", java.util.Arrays.asList(currentUserId, partnerUserId));
+
+                                        // 디버그 로그
+                                        android.util.Log.d("FirebaseManager", "Saving chatRoom - participants: [" + currentUserId + ", " + partnerUserId + "]");
+
+                                        // 양쪽 사용자 정보 저장 (각 사용자별로 상대방 정보 조회 가능하게)
+                                        java.util.Map<String, Object> user1Info = new java.util.HashMap<>();
+                                        user1Info.put("userId", currentUserId);
+                                        user1Info.put("name", currentUserName);
+                                        user1Info.put("role", currentUserRole != null ? currentUserRole : "회원");
+                                        chatRoomData.put("user1", user1Info);
+
+                                        java.util.Map<String, Object> user2Info = new java.util.HashMap<>();
+                                        user2Info.put("userId", partnerUserId);
+                                        user2Info.put("name", partnerName);
+                                        user2Info.put("role", partnerRole != null ? partnerRole : "회원");
+                                        chatRoomData.put("user2", user2Info);
+
+                                        db.collection("chatRooms")
+                                                .document(chatRoomId)
+                                                .set(chatRoomData)
+                                                .addOnSuccessListener(aVoid -> callback.onSuccess(newChatRoom))
+                                                .addOnFailureListener(callback::onFailure);
+                                    }
+
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        // 직급 조회 실패해도 채팅방 생성
+                                        com.example.clubmanagement.models.ChatRoom newChatRoom = new com.example.clubmanagement.models.ChatRoom(
+                                                chatRoomId, partnerUserId, partnerName, partnerRole, clubId, clubName);
+
+                                        java.util.Map<String, Object> chatRoomData = new java.util.HashMap<>();
+                                        chatRoomData.put("chatRoomId", chatRoomId);
+                                        chatRoomData.put("clubId", clubId);
+                                        chatRoomData.put("clubName", clubName);
+                                        chatRoomData.put("lastMessage", "");
+                                        chatRoomData.put("lastMessageTime", System.currentTimeMillis());
+                                        chatRoomData.put("unreadCount", 0);
+                                        chatRoomData.put("notificationEnabled", true);
+                                        chatRoomData.put("leftUserId", null);
+                                        chatRoomData.put("participants", java.util.Arrays.asList(currentUserId, partnerUserId));
+
+                                        java.util.Map<String, Object> user1Info = new java.util.HashMap<>();
+                                        user1Info.put("userId", currentUserId);
+                                        user1Info.put("name", currentUserName);
+                                        user1Info.put("role", "회원");
+                                        chatRoomData.put("user1", user1Info);
+
+                                        java.util.Map<String, Object> user2Info = new java.util.HashMap<>();
+                                        user2Info.put("userId", partnerUserId);
+                                        user2Info.put("name", partnerName);
+                                        user2Info.put("role", partnerRole != null ? partnerRole : "회원");
+                                        chatRoomData.put("user2", user2Info);
+
+                                        db.collection("chatRooms")
+                                                .document(chatRoomId)
+                                                .set(chatRoomData)
+                                                .addOnSuccessListener(aVoid -> callback.onSuccess(newChatRoom))
+                                                .addOnFailureListener(callback::onFailure);
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                callback.onFailure(new Exception("사용자 정보를 가져올 수 없습니다"));
+                            }
+                        });
+                    }
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 현재 사용자의 모든 채팅방 목록 가져오기
+     */
+    public void getChatRooms(ChatRoomsCallback callback) {
+        String currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onFailure(new Exception("로그인이 필요합니다"));
+            return;
+        }
+
+        // 복합 인덱스 없이 조회 후 클라이언트에서 정렬
+        db.collection("chatRooms")
+                .whereArrayContains("participants", currentUserId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    java.util.List<com.example.clubmanagement.models.ChatRoom> chatRooms = new java.util.ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                        String docId = doc.getId();
+
+                        // 수동으로 ChatRoom 객체 생성 (toObject 대신)
+                        com.example.clubmanagement.models.ChatRoom chatRoom = new com.example.clubmanagement.models.ChatRoom();
+                        chatRoom.setChatRoomId(docId);
+
+                        // 공통 필드 설정
+                        String clubId = doc.getString("clubId");
+                        String clubName = doc.getString("clubName");
+                        String lastMessage = doc.getString("lastMessage");
+                        Long lastMessageTime = doc.getLong("lastMessageTime");
+                        Long unreadCount = doc.getLong("unreadCount");
+                        Boolean notificationEnabled = doc.getBoolean("notificationEnabled");
+                        String leftUserId = doc.getString("leftUserId");
+
+                        chatRoom.setClubId(clubId);
+                        chatRoom.setClubName(clubName != null ? clubName : "");
+                        chatRoom.setLastMessage(lastMessage != null ? lastMessage : "");
+                        chatRoom.setLastMessageTime(lastMessageTime != null ? lastMessageTime : 0);
+                        chatRoom.setUnreadCount(unreadCount != null ? unreadCount.intValue() : 0);
+                        chatRoom.setNotificationEnabled(notificationEnabled != null ? notificationEnabled : true);
+
+                        // participants 목록 가져오기
+                        java.util.List<String> participantsList = (java.util.List<String>) doc.get("participants");
+
+                        // 단체 채팅방 여부 확인 (chatRoomId가 "group_"로 시작하면 단체 채팅방)
+                        if (docId.startsWith("group_")) {
+                            chatRoom.setGroupChat(true);
+                            Long memberCount = doc.getLong("memberCount");
+                            chatRoom.setMemberCount(memberCount != null ? memberCount.intValue() : 0);
+                        } else {
+                            // 개인 채팅방
+                            chatRoom.setGroupChat(false);
+
+                            // user1, user2 데이터에서 상대방 정보 추출
+                            java.util.Map<String, Object> user1 = (java.util.Map<String, Object>) doc.get("user1");
+                            java.util.Map<String, Object> user2 = (java.util.Map<String, Object>) doc.get("user2");
+
+                            boolean partnerInfoSet = false;
+
+                            if (user1 != null && user2 != null) {
+                                String user1Id = (String) user1.get("userId");
+                                String user2Id = (String) user2.get("userId");
+
+                                // 상대방 정보 설정 (현재 사용자가 아닌 쪽)
+                                if (user1Id != null && user1Id.equals(currentUserId)) {
+                                    // 현재 사용자가 user1이면 user2가 상대방
+                                    chatRoom.setPartnerUserId(user2Id);
+                                    chatRoom.setPartnerName((String) user2.get("name"));
+                                    chatRoom.setPartnerRole((String) user2.get("role"));
+                                    partnerInfoSet = true;
+                                } else if (user2Id != null && user2Id.equals(currentUserId)) {
+                                    // 현재 사용자가 user2이면 user1이 상대방
+                                    chatRoom.setPartnerUserId(user1Id);
+                                    chatRoom.setPartnerName((String) user1.get("name"));
+                                    chatRoom.setPartnerRole((String) user1.get("role"));
+                                    partnerInfoSet = true;
+                                }
+                            }
+
+                            // user1/user2가 없는 경우 participants에서 상대방 찾기
+                            if (!partnerInfoSet) {
+                                if (participantsList != null) {
+                                    for (String pid : participantsList) {
+                                        if (pid != null && !pid.equals(currentUserId)) {
+                                            chatRoom.setPartnerUserId(pid);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 상대방이 실제로 participants에 없는 경우에만 "상대방이 나갔습니다" 표시
+                            String partnerId = chatRoom.getPartnerUserId();
+                            if (partnerId != null && participantsList != null && !participantsList.contains(partnerId)) {
+                                chatRoom.setLeftUserId(partnerId);
+                            } else {
+                                chatRoom.setLeftUserId(null);
+                            }
+                        }
+
+                        chatRooms.add(chatRoom);
+                    }
+
+                    // 클라이언트에서 lastMessageTime 기준 내림차순 정렬
+                    java.util.Collections.sort(chatRooms, (a, b) ->
+                        Long.compare(b.getLastMessageTime(), a.getLastMessageTime()));
+
+                    callback.onSuccess(chatRooms);
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 채팅방 삭제
+     */
+    public void deleteChatRoom(String chatRoomId, SimpleCallback callback) {
+        db.collection("chatRooms")
+                .document(chatRoomId)
+                .delete()
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 채팅방 나가기 (상대방에게 나갔음을 표시)
+     */
+    public void leaveChatRoom(String chatRoomId, SimpleCallback callback) {
+        String currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onFailure(new Exception("로그인이 필요합니다"));
+            return;
+        }
+
+        java.util.Map<String, Object> updateData = new java.util.HashMap<>();
+        updateData.put("leftUserId", currentUserId);
+        updateData.put("lastMessage", "상대방이 나갔습니다");
+        updateData.put("lastMessageTime", System.currentTimeMillis());
+
+        db.collection("chatRooms")
+                .document(chatRoomId)
+                .update(updateData)
+                .addOnSuccessListener(aVoid -> {
+                    // 나간 사용자의 채팅방 목록에서 제거 (participants에서 제거)
+                    db.collection("chatRooms")
+                            .document(chatRoomId)
+                            .update("participants", com.google.firebase.firestore.FieldValue.arrayRemove(currentUserId))
+                            .addOnSuccessListener(aVoid2 -> callback.onSuccess())
+                            .addOnFailureListener(callback::onFailure);
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 채팅방 알림 설정 토글
+     */
+    public void toggleChatRoomNotification(String chatRoomId, boolean enabled, SimpleCallback callback) {
+        db.collection("chatRooms")
+                .document(chatRoomId)
+                .update("notificationEnabled", enabled)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    // ========================================
+    // Group Chat Methods
+    // ========================================
+
+    /**
+     * 동아리 단체 채팅방 생성 또는 기존 채팅방 반환
+     */
+    public void createOrGetGroupChatRoom(String clubId, String clubName, ChatRoomCallback callback) {
+        String groupChatRoomId = "group_" + clubId;
+
+        db.collection("chatRooms")
+                .document(groupChatRoomId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // 기존 단체 채팅방 반환
+                        com.example.clubmanagement.models.ChatRoom chatRoom = documentSnapshot.toObject(com.example.clubmanagement.models.ChatRoom.class);
+                        if (chatRoom != null) {
+                            chatRoom.setChatRoomId(groupChatRoomId);
+                            callback.onSuccess(chatRoom);
+                        } else {
+                            callback.onFailure(new Exception("채팅방 정보를 가져올 수 없습니다"));
+                        }
+                    } else {
+                        // 새 단체 채팅방 생성
+                        com.example.clubmanagement.models.ChatRoom newChatRoom = new com.example.clubmanagement.models.ChatRoom(
+                                groupChatRoomId, clubId, clubName, 1);
+
+                        java.util.Map<String, Object> chatRoomData = new java.util.HashMap<>();
+                        chatRoomData.put("chatRoomId", groupChatRoomId);
+                        chatRoomData.put("clubId", clubId);
+                        chatRoomData.put("clubName", clubName);
+                        chatRoomData.put("lastMessage", "");
+                        chatRoomData.put("lastMessageTime", System.currentTimeMillis());
+                        chatRoomData.put("unreadCount", 0);
+                        chatRoomData.put("notificationEnabled", true);
+                        chatRoomData.put("isGroupChat", true);
+                        chatRoomData.put("memberCount", 1);
+                        chatRoomData.put("participants", new java.util.ArrayList<String>());
+
+                        db.collection("chatRooms")
+                                .document(groupChatRoomId)
+                                .set(chatRoomData)
+                                .addOnSuccessListener(aVoid -> callback.onSuccess(newChatRoom))
+                                .addOnFailureListener(callback::onFailure);
+                    }
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 사용자를 단체 채팅방에 추가
+     */
+    public void joinGroupChatRoom(String clubId, SimpleCallback callback) {
+        String currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onFailure(new Exception("로그인이 필요합니다"));
+            return;
+        }
+
+        String groupChatRoomId = "group_" + clubId;
+
+        db.collection("chatRooms")
+                .document(groupChatRoomId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // 기존 채팅방에 사용자 추가
+                        db.collection("chatRooms")
+                                .document(groupChatRoomId)
+                                .update(
+                                        "participants", com.google.firebase.firestore.FieldValue.arrayUnion(currentUserId),
+                                        "memberCount", com.google.firebase.firestore.FieldValue.increment(1)
+                                )
+                                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                                .addOnFailureListener(callback::onFailure);
+                    } else {
+                        // 채팅방이 없으면 먼저 동아리 정보 가져와서 생성
+                        getClub(clubId, new ClubCallback() {
+                            @Override
+                            public void onSuccess(com.example.clubmanagement.models.Club club) {
+                                String clubName = club != null ? club.getName() : "동아리";
+
+                                java.util.Map<String, Object> chatRoomData = new java.util.HashMap<>();
+                                chatRoomData.put("chatRoomId", groupChatRoomId);
+                                chatRoomData.put("clubId", clubId);
+                                chatRoomData.put("clubName", clubName);
+                                chatRoomData.put("lastMessage", "");
+                                chatRoomData.put("lastMessageTime", System.currentTimeMillis());
+                                chatRoomData.put("unreadCount", 0);
+                                chatRoomData.put("notificationEnabled", true);
+                                chatRoomData.put("isGroupChat", true);
+                                chatRoomData.put("memberCount", 1);
+                                chatRoomData.put("participants", java.util.Arrays.asList(currentUserId));
+
+                                db.collection("chatRooms")
+                                        .document(groupChatRoomId)
+                                        .set(chatRoomData)
+                                        .addOnSuccessListener(aVoid -> callback.onSuccess())
+                                        .addOnFailureListener(callback::onFailure);
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                callback.onFailure(e);
+                            }
+                        });
+                    }
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 사용자를 단체 채팅방에서 제거
+     */
+    public void leaveGroupChatRoom(String clubId, SimpleCallback callback) {
+        String currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onFailure(new Exception("로그인이 필요합니다"));
+            return;
+        }
+
+        String groupChatRoomId = "group_" + clubId;
+
+        db.collection("chatRooms")
+                .document(groupChatRoomId)
+                .update(
+                        "participants", com.google.firebase.firestore.FieldValue.arrayRemove(currentUserId),
+                        "memberCount", com.google.firebase.firestore.FieldValue.increment(-1)
+                )
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 현재 사용자가 가입한 모든 동아리의 단체 채팅방에 참여
+     * (기존 회원들을 위한 자동 참여 로직)
+     */
+    public void ensureGroupChatMembership(SimpleCallback callback) {
+        String currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onSuccess();
+            return;
+        }
+
+        getCurrentUser(new UserCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.User user) {
+                if (user == null) {
+                    callback.onSuccess();
+                    return;
+                }
+
+                java.util.List<String> clubIds = new java.util.ArrayList<>();
+                java.util.List<String> clubNames = new java.util.ArrayList<>();
+
+                // 중앙동아리
+                if (user.getCentralClubId() != null && !user.getCentralClubId().isEmpty()) {
+                    clubIds.add(user.getCentralClubId());
+                    clubNames.add(user.getCentralClubName() != null ? user.getCentralClubName() : "동아리");
+                }
+
+                // 일반동아리들
+                if (user.getGeneralClubIds() != null) {
+                    for (int i = 0; i < user.getGeneralClubIds().size(); i++) {
+                        String clubId = user.getGeneralClubIds().get(i);
+                        String clubName = (user.getGeneralClubNames() != null && i < user.getGeneralClubNames().size())
+                                ? user.getGeneralClubNames().get(i) : "동아리";
+                        clubIds.add(clubId);
+                        clubNames.add(clubName);
+                    }
+                }
+
+                if (clubIds.isEmpty()) {
+                    callback.onSuccess();
+                    return;
+                }
+
+                // 각 동아리의 단체 채팅방에 참여
+                final int[] completed = {0};
+                for (int i = 0; i < clubIds.size(); i++) {
+                    String clubId = clubIds.get(i);
+                    String clubName = clubNames.get(i);
+
+                    joinGroupChatRoom(clubId, new SimpleCallback() {
+                        @Override
+                        public void onSuccess() {
+                            completed[0]++;
+                            if (completed[0] >= clubIds.size()) {
+                                callback.onSuccess();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            completed[0]++;
+                            if (completed[0] >= clubIds.size()) {
+                                callback.onSuccess();
+                            }
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                callback.onSuccess();
+            }
+        });
+    }
+
+    /**
+     * 특정 사용자를 단체 채팅방에 추가 (가입 승인 시 사용)
+     */
+    public void addUserToGroupChatRoom(String clubId, String clubName, String userId, SimpleCallback callback) {
+        String groupChatRoomId = "group_" + clubId;
+
+        db.collection("chatRooms")
+                .document(groupChatRoomId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // 기존 채팅방에 사용자 추가
+                        db.collection("chatRooms")
+                                .document(groupChatRoomId)
+                                .update(
+                                        "participants", com.google.firebase.firestore.FieldValue.arrayUnion(userId),
+                                        "memberCount", com.google.firebase.firestore.FieldValue.increment(1)
+                                )
+                                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                                .addOnFailureListener(callback::onFailure);
+                    } else {
+                        // 채팅방이 없으면 생성
+                        java.util.Map<String, Object> chatRoomData = new java.util.HashMap<>();
+                        chatRoomData.put("chatRoomId", groupChatRoomId);
+                        chatRoomData.put("clubId", clubId);
+                        chatRoomData.put("clubName", clubName);
+                        chatRoomData.put("lastMessage", "");
+                        chatRoomData.put("lastMessageTime", System.currentTimeMillis());
+                        chatRoomData.put("unreadCount", 0);
+                        chatRoomData.put("notificationEnabled", true);
+                        chatRoomData.put("isGroupChat", true);
+                        chatRoomData.put("memberCount", 1);
+                        chatRoomData.put("participants", java.util.Arrays.asList(userId));
+
+                        db.collection("chatRooms")
+                                .document(groupChatRoomId)
+                                .set(chatRoomData)
+                                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                                .addOnFailureListener(callback::onFailure);
+                    }
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    // ========================================
+    // Member Role Methods
+    // ========================================
+
+    /**
+     * 부원의 직급 설정
+     * @param clubId 동아리 ID
+     * @param userId 부원 사용자 ID
+     * @param role 직급 ("부회장", "총무", "회계", "회원")
+     * @param callback 콜백
+     */
+    public void setMemberRole(String clubId, String userId, String role, SimpleCallback callback) {
+        db.collection("clubs")
+                .document(clubId)
+                .collection("members")
+                .document(userId)
+                .update("role", role)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 부원의 직급 가져오기
+     * @param clubId 동아리 ID
+     * @param userId 부원 사용자 ID
+     * @param callback 콜백
+     */
+    public void getMemberRole(String clubId, String userId, RoleCallback callback) {
+        db.collection("clubs")
+                .document(clubId)
+                .collection("members")
+                .document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String role = documentSnapshot.getString("role");
+                        callback.onSuccess(role != null ? role : "회원");
+                    } else {
+                        callback.onSuccess("회원");
+                    }
+                })
+                .addOnFailureListener(callback::onFailure);
+    }
+
+    public interface RoleCallback {
+        void onSuccess(String role);
+        void onFailure(Exception e);
     }
 }

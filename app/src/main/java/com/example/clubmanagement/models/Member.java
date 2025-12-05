@@ -1,5 +1,7 @@
 package com.example.clubmanagement.models;
 
+import com.google.firebase.firestore.Exclude;
+
 public class Member {
     private String userId;
     private String name;
@@ -90,7 +92,8 @@ public class Member {
         return isAdmin;
     }
 
-    public long getJoinedAt() {
+    @Exclude
+    public long getJoinedAtLong() {
         if (joinedAt == null) {
             return 0;
         }
@@ -104,6 +107,10 @@ public class Member {
             return ((Number) joinedAt).longValue();
         }
         return 0;
+    }
+
+    public Object getJoinedAt() {
+        return joinedAt;
     }
 
     public void setJoinedAt(Object joinedAt) {

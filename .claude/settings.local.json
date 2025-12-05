@@ -25,7 +25,13 @@
       "Bash(cd:*)",
       "Bash(gradlew.bat clean:*)",
       "Bash(cmd /c \"cd /d C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement && gradlew.bat clean assembleDebug 2>&1\")",
-      "Bash(cmd /c \"cd /d C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement && rmdir /s /q app\\build 2>nul && gradlew.bat assembleDebug 2>&1\")"
+      "Bash(cmd /c \"cd /d C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement && rmdir /s /q app\\build 2>nul && gradlew.bat assembleDebug 2>&1\")",
+      "Bash(cmd /c:*)",
+      "Bash(timeout /t 60)",
+      "Bash(.gradlew.bat assembleDebug)",
+      "Bash(del \"C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement\\app\\src\\main\\java\\com\\example\\clubmanagement\\activities\\QnADetailActivity.java\")",
+      "Bash(C:UsersLGAppDataLocalAndroidSdkplatform-toolsadb.exe install -r C:UsersLGAndroidStudioProjectsClubManagementappbuildoutputsapkdebugapp-debug.apk)",
+      "Bash(git -C C:\\Users\\LG\\AndroidStudioProjects\\ClubManagement status:*)"
     ],
     "deny": [],
     "ask": []

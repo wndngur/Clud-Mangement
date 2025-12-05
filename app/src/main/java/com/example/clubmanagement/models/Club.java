@@ -469,4 +469,18 @@ public class Club {
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy.MM.dd", java.util.Locale.KOREA);
         return sdf.format(applicationEndDate.toDate());
     }
+
+    // 가입 신청 상태 메시지
+    public String getApplicationStatusMessage() {
+        // 가입 신청이 닫혀있으면
+        if (!applicationOpen) {
+            return "현재 가입 신청을 받지 않습니다";
+        }
+        // 마감일이 지났으면
+        if (applicationEndDate != null && System.currentTimeMillis() >= applicationEndDate.toDate().getTime()) {
+            return "가입 신청 기간이 종료되었습니다";
+        }
+        // 정상적으로 신청 가능
+        return "";
+    }
 }

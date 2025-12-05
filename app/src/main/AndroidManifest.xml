@@ -191,6 +191,13 @@
             android:label="최고 관리자 설정"
             android:parentActivityName=".activities.DetailActivity"/>
 
+        <!-- Demote Central Club Activity -->
+        <activity
+            android:name=".activities.DemoteCentralClubActivity"
+            android:exported="false"
+            android:label="동아리 강등 관리"
+            android:parentActivityName=".activities.SuperAdminSettingsActivity"/>
+
         <!-- Edit Requests Activity (동아리 관리자용 수정 요청 확인) -->
         <activity
             android:name=".activities.EditRequestsActivity"
@@ -291,6 +298,49 @@
             android:exported="false"
             android:label="알림"
             android:parentActivityName=".activities.ClubMainActivity"/>
+
+        <!-- Q&A Activity (Q&A / FAQ) -->
+        <activity
+            android:name=".activities.QnAActivity"
+            android:exported="false"
+            android:label="Q&amp;A / FAQ"
+            android:parentActivityName=".activities.DetailActivity"/>
+
+        <!-- Ask Question Activity (질문하기) -->
+        <activity
+            android:name=".activities.AskQuestionActivity"
+            android:exported="false"
+            android:label="질문하기"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.QnAActivity"/>
+
+        <!-- Q&A Detail Activity (질문 상세) -->
+        <activity
+            android:name=".activities.QnADetailActivity"
+            android:exported="false"
+            android:label="질문 상세"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.QnAActivity"/>
+
+        <!-- Chat Activity (채팅) -->
+        <activity
+            android:name=".activities.ChatActivity"
+            android:exported="false"
+            android:label="채팅"/>
+
+        <!-- Chat List Activity (목록) -->
+        <activity
+            android:name=".activities.ChatListActivity"
+            android:exported="false"
+            android:label="목록"/>
+
+        <!-- Chat Detail Activity (채팅 상세) -->
+        <activity
+            android:name=".activities.ChatDetailActivity"
+            android:exported="false"
+            android:label="채팅"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".activities.ChatActivity"/>
 
         <!-- FileProvider for sharing files -->
         <provider

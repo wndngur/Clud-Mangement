@@ -139,6 +139,11 @@ public class MemberManagementActivity extends AppCompatActivity {
             public void onReject(Member member) {
                 // Not used for members
             }
+
+            @Override
+            public void onSetRole(Member member) {
+                showSetRoleDialog(member);
+            }
         });
         rvMembers.setAdapter(membersAdapter);
 
@@ -168,6 +173,11 @@ public class MemberManagementActivity extends AppCompatActivity {
             @Override
             public void onReject(Member member) {
                 rejectJoinRequest(member);
+            }
+
+            @Override
+            public void onSetRole(Member member) {
+                // Not used for join requests
             }
         });
         rvJoinRequests.setAdapter(joinRequestsAdapter);
@@ -627,5 +637,40 @@ public class MemberManagementActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    // 직급 설정 다이얼로그
+    private void showSetRoleDialog(Member member) {
+        String[] roles = {"부회장", "총무", "회계", "회원"};
+
+        new AlertDialog.Builder(this)
+            .setTitle("직급 설정")
+            .setItems(roles, (dialog, which) -> {
+                String selectedRole = roles[which];
+                setMemberRole(member, selectedRole);
+            })
+            .setNegativeButton("취소", null)
+            .show();
+    }
+
+    private void setMemberRole(Member member, String role) {
+        progressBar.setVisibility(View.VISIBLE);
+        firebaseManager.setMemberRole(clubId, member.getUserId(), role, new FirebaseManager.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(MemberManagementActivity.this,
+                    member.getName() + "님의 직급이 '" + role + "'(으)로 설정되었습니다", Toast.LENGTH_SHORT).show();
+                member.setRole(role);
+                membersAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(MemberManagementActivity.this,
+                    "직급 설정에 실패했습니다: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

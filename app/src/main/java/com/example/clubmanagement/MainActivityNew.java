@@ -341,23 +341,32 @@ public class MainActivityNew extends BaseActivity {
             int itemId = item.getItemId();
 
             if (itemId == R.id.nav_home) {
-                Toast.makeText(this, "홈", Toast.LENGTH_SHORT).show();
+                // 현재 페이지 - 아무 동작 안함
+                return true;
+            } else if (itemId == R.id.nav_chat) {
+                Intent intent = new Intent(MainActivityNew.this,
+                        com.example.clubmanagement.activities.ChatActivity.class);
+                startActivity(intent);
+                finish();
                 return true;
             } else if (itemId == R.id.nav_clubs) {
                 Intent intent = new Intent(MainActivityNew.this,
                         com.example.clubmanagement.activities.ClubListActivity.class);
                 intent.putExtra("from_club_settings", false);  // 네비게이션 바 표시
                 startActivity(intent);
+                finish();
                 return true;
             } else if (itemId == R.id.nav_recommend) {
                 Intent intent = new Intent(MainActivityNew.this,
                         com.example.clubmanagement.activities.ClubRecommendActivity.class);
                 startActivity(intent);
+                finish();
                 return true;
             } else if (itemId == R.id.nav_myinfo) {
                 // 내정보 클릭 시 설정 화면으로 이동
                 Intent intent = new Intent(MainActivityNew.this, SettingsActivity.class);
                 startActivity(intent);
+                finish();
                 return true;
             }
 

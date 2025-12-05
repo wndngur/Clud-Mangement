@@ -52,6 +52,7 @@ public class SuperAdminSettingsActivity extends AppCompatActivity {
     private MaterialButton btnEditCarouselImage;
     private MaterialButton btnDeleteCarouselImage;
     private MaterialButton btnCancelCentralClub;
+    private MaterialButton btnDemoteCentralClubs;
 
     private FirebaseManager firebaseManager;
     private int pageIndex;
@@ -111,6 +112,7 @@ public class SuperAdminSettingsActivity extends AppCompatActivity {
         btnEditCarouselImage = findViewById(R.id.btnEditCarouselImage);
         btnDeleteCarouselImage = findViewById(R.id.btnDeleteCarouselImage);
         btnCancelCentralClub = findViewById(R.id.btnCancelCentralClub);
+        btnDemoteCentralClubs = findViewById(R.id.btnDemoteCentralClubs);
 
         // Set club name
         tvClubName.setText(clubName != null ? clubName : "동아리");
@@ -144,6 +146,11 @@ public class SuperAdminSettingsActivity extends AppCompatActivity {
 
         btnCancelCentralClub.setOnClickListener(v -> {
             showCancelCentralClubDialog();
+        });
+
+        btnDemoteCentralClubs.setOnClickListener(v -> {
+            Intent intent = new Intent(SuperAdminSettingsActivity.this, DemoteCentralClubActivity.class);
+            startActivity(intent);
         });
     }
 

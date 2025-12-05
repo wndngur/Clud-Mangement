@@ -81,6 +81,8 @@ public class ClubSettingsActivity extends AppCompatActivity {
     private MaterialButton btnCancelWithdrawal;
     private TextView tvWithdrawalDesc;
     private MaterialCardView cardAdminRole;
+    private MaterialCardView cardQnAManagement;
+    private MaterialButton btnQnAManagement;
     private UserData currentUserData;
     private Club currentClub;
     private String clubName;
@@ -173,6 +175,8 @@ public class ClubSettingsActivity extends AppCompatActivity {
         btnCancelWithdrawal = findViewById(R.id.btnCancelWithdrawal);
         tvWithdrawalDesc = findViewById(R.id.tvWithdrawalDesc);
         cardAdminRole = findViewById(R.id.cardAdminRole);
+        cardQnAManagement = findViewById(R.id.cardQnAManagement);
+        btnQnAManagement = findViewById(R.id.btnQnAManagement);
 
         // Poster image views (1장)
         ivPosterPreview = findViewById(R.id.ivPosterPreview);
@@ -210,6 +214,7 @@ public class ClubSettingsActivity extends AppCompatActivity {
         btnApplyCentral.setOnClickListener(v -> applyCentralClub());
         btnWithdrawalRequest.setOnClickListener(v -> showWithdrawalDialog());
         btnCancelWithdrawal.setOnClickListener(v -> cancelWithdrawalRequest());
+        btnQnAManagement.setOnClickListener(v -> openQnAManagement());
 
         // Poster image management (1장)
         btnChangePoster.setOnClickListener(v -> openGalleryForPoster());
@@ -641,6 +646,14 @@ public class ClubSettingsActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    private void openQnAManagement() {
+        Intent intent = new Intent(ClubSettingsActivity.this, QnAActivity.class);
+        intent.putExtra("club_id", clubId);
+        intent.putExtra("club_name", clubName);
+        intent.putExtra("admin_mode", true);  // 관리자 모드로 열기
+        startActivity(intent);
+    }
+
     private void loadUnreadEditRequestCount() {
         firebaseManager.getUnreadEditRequestCount(clubId, new FirebaseManager.CountCallback() {
             @Override
@@ -762,6 +775,7 @@ public class ClubSettingsActivity extends AppCompatActivity {
             // 관리자 모드일 때 관리 카드뷰들 표시
             cardMemberManagement.setVisibility(View.VISIBLE);
             cardClubInfoEdit.setVisibility(View.VISIBLE);
+            cardQnAManagement.setVisibility(View.VISIBLE);
 
             // 포스터/설명 편집은 중앙동아리만 가능하므로 일단 숨김 처리
             // loadClubAndApplicationStatus에서 중앙동아리 여부 확인 후 표시
@@ -797,6 +811,7 @@ public class ClubSettingsActivity extends AppCompatActivity {
             cardClubInfoEdit.setVisibility(View.GONE);
             cardEditRequests.setVisibility(View.GONE);
             cardCentralApplication.setVisibility(View.GONE);
+            cardQnAManagement.setVisibility(View.GONE);
 
             // 일반 사용자일 때 탈퇴 신청 카드 표시
             cardWithdrawal.setVisibility(View.VISIBLE);

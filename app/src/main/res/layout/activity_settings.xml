@@ -706,6 +706,68 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 동아리 강등 관리 카드 (최고 관리자 전용) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardClubDemote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#FF9800"
+                app:strokeWidth="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@android:drawable/ic_menu_revert"
+                            android:contentDescription="동아리 강등"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="동아리 강등 관리"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="중앙동아리를 일반동아리로 강등할 수 있습니다. 인원 부족 등의 이유로 자격이 미달된 동아리를 관리합니다."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_marginTop="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClubDemote"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="강등 관리하기"
+                        app:icon="@android:drawable/ic_menu_revert"
+                        app:iconGravity="textStart"
+                        app:backgroundTint="#FF9800"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 전체 배너 관리 카드 (최고 관리자 전용) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardBannerManagement"

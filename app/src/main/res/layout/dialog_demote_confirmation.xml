@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Message -->
+    <TextView
+        android:id="@+id/tvMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="다음 동아리를 일반동아리로 강등하시겠습니까?"
+        android:textSize="14sp"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Confirmation Checkbox -->
+    <CheckBox
+        android:id="@+id/cbConfirm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="위 내용을 확인했으며, 강등을 진행하겠습니다"
+        android:textSize="13sp"
+        android:textColor="@android:color/black"/>
+
+</LinearLayout>

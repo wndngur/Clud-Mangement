@@ -47,6 +47,7 @@ public class DetailActivity extends BaseActivity {
     private TextView tvDetailTitle;
     private TextView tvDetailDescription;
     private LinearLayout llFeatureList;
+    private MaterialButton btnQnAFaq;
     private MaterialButton btnAction;
     private MaterialButton btnAdminManage;
     private FloatingActionButton fabEdit;
@@ -121,7 +122,8 @@ public class DetailActivity extends BaseActivity {
         }
 
         // 로그인 안 된 경우 바로 데이터 로드
-        if (firebaseManager.getCurrentUserId() == null) {
+        String userId = firebaseManager.getCurrentUserId();
+        if (userId == null) {
             loadContentData();
             return;
         }
@@ -134,11 +136,21 @@ public class DetailActivity extends BaseActivity {
                     if (user.hasJoinedCentralClub()) {
                         userCentralClubId = user.getCentralClubId();
                         userCentralClubName = user.getCentralClubName();
+                        loadContentData();
+                    } else {
+                        // 일반동아리 목록도 저장
+                        userGeneralClubIds = user.getGeneralClubIds();
+
+                        // centralClubId가 없으면 일반동아리 중에 중앙동아리로 전환된 것이 있는지 확인
+                        if (userGeneralClubIds != null && !userGeneralClubIds.isEmpty()) {
+                            checkIfGeneralClubBecameCentral(userGeneralClubIds, userId);
+                        } else {
+                            loadContentData();
+                        }
                     }
-                    // 일반동아리 목록도 저장 (중앙동아리로 전환된 경우 확인용)
-                    userGeneralClubIds = user.getGeneralClubIds();
+                } else {
+                    loadContentData();
                 }
-                loadContentData();
             }
 
             @Override
@@ -146,6 +158,69 @@ public class DetailActivity extends BaseActivity {
                 loadContentData();
             }
         });
+    }
+
+    private void checkIfGeneralClubBecameCentral(java.util.List<String> generalClubIds, String userId) {
+        final int[] checkedCount = {0};
+        final boolean[] foundCentral = {false};
+        final int totalClubs = generalClubIds.size();
+
+        // 일반동아리 목록을 순회하며 중앙동아리로 전환된 것이 있는지 확인
+        for (String clubId : generalClubIds) {
+            firebaseManager.getDb().collection("clubs")
+                    .document(clubId)
+                    .get()
+                    .addOnSuccessListener(clubDoc -> {
+                        if (clubDoc.exists() && !foundCentral[0]) {
+                            Boolean isCentralClub = clubDoc.getBoolean("centralClub");
+                            // 중앙동아리로 전환되었는지 확인
+                            if (isCentralClub != null && isCentralClub) {
+                                // members 확인하여 실제로 멤버인지도 체크
+                                firebaseManager.getDb().collection("clubs")
+                                        .document(clubId)
+                                        .collection("members")
+                                        .document(userId)
+                                        .get()
+                                        .addOnSuccessListener(memberDoc -> {
+                                            if (memberDoc.exists() && !foundCentral[0]) {
+                                                // 실제로 멤버임 - 중앙동아리로 전환됨
+                                                foundCentral[0] = true;
+                                                userCentralClubId = clubId;
+                                                userCentralClubName = clubDoc.getString("name");
+                                                android.util.Log.d("DetailActivity", "Found central club from general clubs: " + clubId);
+                                            }
+                                            checkedCount[0]++;
+                                            if (checkedCount[0] == totalClubs) {
+                                                loadContentData();
+                                            }
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            checkedCount[0]++;
+                                            if (checkedCount[0] == totalClubs) {
+                                                loadContentData();
+                                            }
+                                        });
+                            } else {
+                                // 중앙동아리가 아님
+                                checkedCount[0]++;
+                                if (checkedCount[0] == totalClubs) {
+                                    loadContentData();
+                                }
+                            }
+                        } else {
+                            checkedCount[0]++;
+                            if (checkedCount[0] == totalClubs) {
+                                loadContentData();
+                            }
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        checkedCount[0]++;
+                        if (checkedCount[0] == totalClubs) {
+                            loadContentData();
+                        }
+                    });
+        }
     }
 
     private void loadContentData() {
@@ -170,6 +245,7 @@ public class DetailActivity extends BaseActivity {
         tvDetailTitle = findViewById(R.id.tvDetailTitle);
         tvDetailDescription = findViewById(R.id.tvDetailDescription);
         llFeatureList = findViewById(R.id.llFeatureList);
+        btnQnAFaq = findViewById(R.id.btnQnAFaq);
         btnAction = findViewById(R.id.btnAction);
         btnAdminManage = findViewById(R.id.btnAdminManage);
         fabEdit = findViewById(R.id.fabEdit);
@@ -490,7 +566,6 @@ public class DetailActivity extends BaseActivity {
             return;
         }
 
-        // 직접 members 컬렉션에서 멤버십 확인 (가장 확실한 방법)
         String userId = firebaseManager.getCurrentUserId();
         if (userId == null) {
             // 로그인 안 됨 - 가입 신청 버튼
@@ -499,6 +574,50 @@ public class DetailActivity extends BaseActivity {
             return;
         }
 
+        // 먼저 이미 다른 중앙동아리에 가입되어 있는지 확인
+        if (userCentralClubId != null && !userCentralClubId.isEmpty() && !userCentralClubId.equals(clubId)) {
+            // 다른 중앙동아리에 이미 가입됨
+            // 캐러셀에서 온 경우 (중앙동아리) 바로 버튼 숨김
+            if (!fromClubList) {
+                isMyClub = false;
+                btnAction.setVisibility(View.GONE);
+                android.util.Log.d("DetailActivity", "Already in central club, hiding button for carousel item");
+                return;
+            } else {
+                // ClubList에서 온 경우 → 중앙동아리인지 확인 필요
+                firebaseManager.getDb().collection("clubs")
+                        .document(clubId)
+                        .get()
+                        .addOnSuccessListener(clubDoc -> {
+                            if (clubDoc.exists()) {
+                                Boolean isCentralClub = clubDoc.getBoolean("centralClub");
+                                if (isCentralClub != null && isCentralClub) {
+                                    // 중앙동아리 + 이미 다른 중앙동아리 가입 → 버튼 숨김
+                                    isMyClub = false;
+                                    btnAction.setVisibility(View.GONE);
+                                } else {
+                                    // 일반동아리 → 가입 신청 버튼 표시
+                                    isMyClub = false;
+                                    btnAction.setText("가입 신청하기");
+                                    btnAction.setVisibility(View.VISIBLE);
+                                }
+                            } else {
+                                // 동아리 정보 없음 → 버튼 표시
+                                isMyClub = false;
+                                btnAction.setText("가입 신청하기");
+                                btnAction.setVisibility(View.VISIBLE);
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            // 에러 시 버튼 숨김 (안전하게)
+                            isMyClub = false;
+                            btnAction.setVisibility(View.GONE);
+                        });
+                return;
+            }
+        }
+
+        // 현재 동아리의 멤버인지 확인
         firebaseManager.getDb().collection("clubs")
                 .document(clubId)
                 .collection("members")
@@ -512,17 +631,10 @@ public class DetailActivity extends BaseActivity {
                         btnAction.setText("내 동아리로 가기");
                         btnAction.setVisibility(View.VISIBLE);
                     } else {
-                        // 멤버 아님 - 다른 중앙동아리 가입 여부 확인
-                        if (userCentralClubId != null && !userCentralClubId.isEmpty()) {
-                            // 이미 다른 중앙동아리에 가입됨 - 버튼 숨김
-                            isMyClub = false;
-                            btnAction.setVisibility(View.GONE);
-                        } else {
-                            // 미가입 - 가입 신청 버튼
-                            isMyClub = false;
-                            btnAction.setText("가입 신청하기");
-                            btnAction.setVisibility(View.VISIBLE);
-                        }
+                        // 멤버 아님 - 가입 신청 버튼
+                        isMyClub = false;
+                        btnAction.setText("가입 신청하기");
+                        btnAction.setVisibility(View.VISIBLE);
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -748,6 +860,44 @@ public class DetailActivity extends BaseActivity {
             openSuperAdminSettings();
         });
 
+        // Q&A / FAQ 버튼
+        btnQnAFaq.setOnClickListener(v -> {
+            // Get club ID
+            String clubIdForQnA = getIntent().getStringExtra("club_id");
+            if (clubIdForQnA == null || clubIdForQnA.isEmpty()) {
+                if (currentItem != null && currentItem.getClubId() != null) {
+                    clubIdForQnA = currentItem.getClubId();
+                }
+            }
+
+            if (clubIdForQnA == null || clubIdForQnA.isEmpty()) {
+                Toast.makeText(this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Get club name - 여러 소스에서 안전하게 가져오기
+            String clubNameForQnA = clubName;  // onCreate에서 설정된 clubName 우선 사용
+            if (clubNameForQnA == null || clubNameForQnA.isEmpty()) {
+                clubNameForQnA = getIntent().getStringExtra("club_name");
+            }
+            if (clubNameForQnA == null || clubNameForQnA.isEmpty()) {
+                if (currentItem != null && currentItem.getClubName() != null) {
+                    clubNameForQnA = currentItem.getClubName();
+                } else if (currentItem != null && currentItem.getTitle() != null) {
+                    clubNameForQnA = currentItem.getTitle();
+                }
+            }
+            if (clubNameForQnA == null || clubNameForQnA.isEmpty()) {
+                clubNameForQnA = "동아리";  // 기본값
+            }
+
+            // Open QnAActivity
+            Intent intent = new Intent(DetailActivity.this, QnAActivity.class);
+            intent.putExtra("club_id", clubIdForQnA);
+            intent.putExtra("club_name", clubNameForQnA);
+            startActivity(intent);
+        });
+
         // 액션 버튼 - 내 동아리로 가기 또는 회원가입 화면으로 이동
         btnAction.setOnClickListener(v -> {
             // 내 동아리로 가기 버튼인 경우
@@ -955,27 +1105,73 @@ public class DetailActivity extends BaseActivity {
     }
 
     private void setupClubListContent() {
-        // 동아리 목록에서 온 경우의 콘텐츠 설정
-        tvDetailTitle.setText(clubName);
+        // 동아리 목록에서 온 경우 - club_id로 실제 데이터 로드
+        progressBar.setVisibility(View.VISIBLE);
 
-        // 동아리 설명 (기본 템플릿)
-        String description = clubName + "에 오신 것을 환영합니다! " +
-                "우리 동아리에 가입하시려면 아래 정보를 입력해주세요.";
-        tvDetailDescription.setText(description);
-
-        // 기능 목록
-        llFeatureList.removeAllViews();
-        addFeature("📝 회원 가입 신청");
-        addFeature("✅ 관리자 승인 대기");
-        addFeature("📧 가입 완료 알림");
-        addFeature("👥 동아리 활동 시작");
-
-        // 버튼 - 기본으로 표시 (최고 관리자 모드가 아닐 때)
-        btnAction.setText("가입 신청하기");
-        btnAction.setVisibility(isSuperAdminMode ? View.GONE : View.VISIBLE);
+        String clubId = getIntent().getStringExtra("club_id");
+        if (clubId == null || clubId.isEmpty()) {
+            progressBar.setVisibility(View.GONE);
+            Toast.makeText(this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         // 편집 버튼 숨김 (동아리 목록에서 온 경우)
         fabEdit.setVisibility(View.GONE);
+
+        // Firebase에서 club 데이터 로드
+        firebaseManager.getClub(clubId, new FirebaseManager.ClubCallback() {
+            @Override
+            public void onSuccess(com.example.clubmanagement.models.Club club) {
+                progressBar.setVisibility(View.GONE);
+                if (club != null) {
+                    displayClubData(club, clubId);
+                } else {
+                    Toast.makeText(DetailActivity.this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(DetailActivity.this, "데이터 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        });
+    }
+
+    private void displayClubData(com.example.clubmanagement.models.Club club, String clubId) {
+        // Set title
+        tvDetailTitle.setText(club.getName());
+
+        // Set description
+        String description = club.getDescription();
+        if (description != null && !description.isEmpty()) {
+            tvDetailDescription.setText(description);
+        } else {
+            tvDetailDescription.setText(club.getName() + " 동아리입니다.");
+        }
+
+        // Load images from Club
+        loadClubImages(club);
+
+        // 동아리 정보 로드 및 표시
+        displayClubInfoSection(club);
+
+        // 버튼 상태 업데이트
+        loadApplicationOpenSetting(clubId);
+    }
+
+    private void loadClubImages(com.example.clubmanagement.models.Club club) {
+        List<Object> images = new ArrayList<>();
+
+        // Club 모델에는 이미지 필드가 없으므로 기본 색상 사용
+        // TODO: 나중에 Club에 이미지 필드 추가 시 여기서 로드
+        images.add(0xFF6200EA); // 보라색 기본 배경
+
+        detailImageAdapter.updateImages(images);
+        setupImageIndicators(images.size());
     }
 
     private String getClubName(int index) {
@@ -999,6 +1195,13 @@ public class DetailActivity extends BaseActivity {
         }
 
         return "동아리";
+    }
+
+    @Override
+    public void onBackPressed() {
+        // 시스템 뒤로가기 버튼 처리 - 캐러셀 액티비티로 돌아가기
+        super.onBackPressed();
+        finish();
     }
 
     private void openSuperAdminSettings() {

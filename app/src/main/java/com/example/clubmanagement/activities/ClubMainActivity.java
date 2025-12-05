@@ -132,6 +132,7 @@ public class ClubMainActivity extends BaseActivity {
     private String clubName;
     private String clubId;
     private boolean isCentralClub = false;
+    private boolean fromClubList = false;  // 일반동아리 목록에서 왔는지
     private com.example.clubmanagement.models.Club currentClub;
 
     // Firebase에서 가져온 인원 제한 값 (기본값 설정)
@@ -169,6 +170,8 @@ public class ClubMainActivity extends BaseActivity {
         if (!isCentralClub) {
             isCentralClub = getIntent().getBooleanExtra("is_central_club", false);
         }
+        // 일반동아리 목록에서 왔는지 확인
+        fromClubList = getIntent().getBooleanExtra("from_club_list", false);
 
         initViews();
         setupImagePickerLauncher();
@@ -179,12 +182,15 @@ public class ClubMainActivity extends BaseActivity {
     }
 
     private void setupBackPressedCallback() {
-        // 최고 관리자 또는 일반동아리 회원은 뒤로가기로 캐러셀 화면으로 돌아갈 수 있음
+        // 일반동아리 목록에서 온 경우, 최고 관리자 또는 일반동아리 회원은 뒤로가기로 캐러셀 화면으로 돌아갈 수 있음
         // 중앙동아리 회원은 뒤로가기 방지
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (SettingsActivity.isSuperAdminMode(ClubMainActivity.this) || !isCentralClub) {
+                if (fromClubList) {
+                    // 일반동아리 목록에서 온 경우 뒤로가기
+                    finish();
+                } else if (SettingsActivity.isSuperAdminMode(ClubMainActivity.this) || !isCentralClub) {
                     navigateToMainCarousel();
                 } else {
                     moveTaskToBack(true);
@@ -209,9 +215,16 @@ public class ClubMainActivity extends BaseActivity {
         ivBack = findViewById(R.id.ivBack);  // 호환성을 위해 유지
         tvAdminModeIndicator = findViewById(R.id.tvAdminModeIndicator);
 
-        // 홈 버튼 클릭 시 캐러셀 화면으로 이동 (항상 표시)
+        // 홈 버튼 클릭 시 캐러셀 화면 또는 일반동아리 목록으로 이동 (항상 표시)
         if (ivHome != null) {
-            ivHome.setOnClickListener(v -> navigateToMainCarousel());
+            ivHome.setOnClickListener(v -> {
+                if (fromClubList) {
+                    // 일반동아리 목록에서 온 경우 ClubListActivity로 이동
+                    finish();
+                } else {
+                    navigateToMainCarousel();
+                }
+            });
         }
         llNoticesContainer = findViewById(R.id.llNoticesContainer);
         btnAddNotice = findViewById(R.id.btnAddNotice);

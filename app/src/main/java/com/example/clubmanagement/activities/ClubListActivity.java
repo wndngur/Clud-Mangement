@@ -176,6 +176,11 @@ public class ClubListActivity extends BaseActivity {
                 // 홈으로 이동 - 중앙동아리 가입 여부에 따라 다른 화면으로 이동
                 navigateToHome();
                 return true;
+            } else if (itemId == R.id.nav_chat) {
+                Intent intent = new Intent(ClubListActivity.this, ChatActivity.class);
+                startActivity(intent);
+                finish();
+                return true;
             } else if (itemId == R.id.nav_clubs) {
                 // 현재 페이지 - 아무 동작 안함
                 return true;
@@ -186,7 +191,10 @@ public class ClubListActivity extends BaseActivity {
                 finish(); // 현재 페이지 종료
                 return true;
             } else if (itemId == R.id.nav_myinfo) {
-                Toast.makeText(this, "내정보", Toast.LENGTH_SHORT).show();
+                // 내정보(설정) 화면으로 이동
+                Intent intent = new Intent(ClubListActivity.this, SettingsActivity.class);
+                startActivity(intent);
+                finish();
                 return true;
             }
 
