@@ -304,6 +304,8 @@ public class MemberRegistrationActivity extends AppCompatActivity {
         String phone = etPhone.getText() != null ? etPhone.getText().toString().trim() : "";
         String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
 
+        android.util.Log.d("MemberRegistration", "registerMember - centralClubId: " + centralClubId + ", clubName: " + clubName);
+
         // 가입 신청 (승인 대기 상태로 생성)
         firebaseManager.createMembershipApplication(
                 centralClubId,

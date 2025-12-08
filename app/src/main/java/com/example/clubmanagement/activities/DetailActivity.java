@@ -47,6 +47,7 @@ public class DetailActivity extends BaseActivity {
     private TextView tvDetailTitle;
     private TextView tvDetailDescription;
     private LinearLayout llFeatureList;
+    private MaterialButton btnChatWithAdmin;
     private MaterialButton btnQnAFaq;
     private MaterialButton btnAction;
     private MaterialButton btnAdminManage;
@@ -245,6 +246,7 @@ public class DetailActivity extends BaseActivity {
         tvDetailTitle = findViewById(R.id.tvDetailTitle);
         tvDetailDescription = findViewById(R.id.tvDetailDescription);
         llFeatureList = findViewById(R.id.llFeatureList);
+        btnChatWithAdmin = findViewById(R.id.btnChatWithAdmin);
         btnQnAFaq = findViewById(R.id.btnQnAFaq);
         btnAction = findViewById(R.id.btnAction);
         btnAdminManage = findViewById(R.id.btnAdminManage);
@@ -574,14 +576,23 @@ public class DetailActivity extends BaseActivity {
             return;
         }
 
-        // 먼저 이미 다른 중앙동아리에 가입되어 있는지 확인
+        // 이미 이 동아리(중앙동아리)에 가입되어 있는 경우 - "내 동아리로 가기"
+        if (userCentralClubId != null && !userCentralClubId.isEmpty() && userCentralClubId.equals(clubId)) {
+            isMyClub = true;
+            btnAction.setText("내 동아리로 가기");
+            btnAction.setVisibility(View.VISIBLE);
+            android.util.Log.d("DetailActivity", "Already member of this club, showing 내 동아리로 가기");
+            return;
+        }
+
+        // 다른 중앙동아리에 가입되어 있는지 확인
         if (userCentralClubId != null && !userCentralClubId.isEmpty() && !userCentralClubId.equals(clubId)) {
             // 다른 중앙동아리에 이미 가입됨
             // 캐러셀에서 온 경우 (중앙동아리) 바로 버튼 숨김
             if (!fromClubList) {
                 isMyClub = false;
                 btnAction.setVisibility(View.GONE);
-                android.util.Log.d("DetailActivity", "Already in central club, hiding button for carousel item");
+                android.util.Log.d("DetailActivity", "Already in different central club, hiding button for carousel item");
                 return;
             } else {
                 // ClubList에서 온 경우 → 중앙동아리인지 확인 필요
@@ -596,10 +607,8 @@ public class DetailActivity extends BaseActivity {
                                     isMyClub = false;
                                     btnAction.setVisibility(View.GONE);
                                 } else {
-                                    // 일반동아리 → 가입 신청 버튼 표시
-                                    isMyClub = false;
-                                    btnAction.setText("가입 신청하기");
-                                    btnAction.setVisibility(View.VISIBLE);
+                                    // 일반동아리 → 멤버인지 확인
+                                    checkMembershipAndUpdateButton(clubId, userId);
                                 }
                             } else {
                                 // 동아리 정보 없음 → 버튼 표시
@@ -617,7 +626,11 @@ public class DetailActivity extends BaseActivity {
             }
         }
 
-        // 현재 동아리의 멤버인지 확인
+        // 현재 동아리의 멤버인지 확인 (중앙동아리 정보가 없는 경우)
+        checkMembershipAndUpdateButton(clubId, userId);
+    }
+
+    private void checkMembershipAndUpdateButton(String clubId, String userId) {
         firebaseManager.getDb().collection("clubs")
                 .document(clubId)
                 .collection("members")
@@ -630,11 +643,13 @@ public class DetailActivity extends BaseActivity {
                         userCentralClubId = clubId;
                         btnAction.setText("내 동아리로 가기");
                         btnAction.setVisibility(View.VISIBLE);
+                        android.util.Log.d("DetailActivity", "Member found, showing 내 동아리로 가기");
                     } else {
                         // 멤버 아님 - 가입 신청 버튼
                         isMyClub = false;
                         btnAction.setText("가입 신청하기");
                         btnAction.setVisibility(View.VISIBLE);
+                        android.util.Log.d("DetailActivity", "Not a member, showing 가입 신청하기");
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -642,6 +657,7 @@ public class DetailActivity extends BaseActivity {
                     isMyClub = false;
                     btnAction.setText("가입 신청하기");
                     btnAction.setVisibility(View.VISIBLE);
+                    android.util.Log.e("DetailActivity", "Member check failed: " + e.getMessage());
                 });
     }
 
@@ -858,6 +874,11 @@ public class DetailActivity extends BaseActivity {
         // 최고 관리자 설정 버튼
         ivSuperAdminSettings.setOnClickListener(v -> {
             openSuperAdminSettings();
+        });
+
+        // 관리자와 대화하기 버튼
+        btnChatWithAdmin.setOnClickListener(v -> {
+            startChatWithAdmin();
         });
 
         // Q&A / FAQ 버튼
@@ -1202,6 +1223,126 @@ public class DetailActivity extends BaseActivity {
         // 시스템 뒤로가기 버튼 처리 - 캐러셀 액티비티로 돌아가기
         super.onBackPressed();
         finish();
+    }
+
+    private void startChatWithAdmin() {
+        // 로그인 여부 확인
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            Toast.makeText(this, "로그인이 필요합니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // clubId 가져오기
+        String clubId = getIntent().getStringExtra("club_id");
+        if (clubId == null || clubId.isEmpty()) {
+            if (currentItem != null && currentItem.getClubId() != null) {
+                clubId = currentItem.getClubId();
+            }
+        }
+
+        if (clubId == null || clubId.isEmpty()) {
+            Toast.makeText(this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // clubName 가져오기
+        String clubNameForChat = clubName;
+        if (clubNameForChat == null || clubNameForChat.isEmpty()) {
+            clubNameForChat = getIntent().getStringExtra("club_name");
+        }
+        if (clubNameForChat == null || clubNameForChat.isEmpty()) {
+            if (currentItem != null && currentItem.getClubName() != null) {
+                clubNameForChat = currentItem.getClubName();
+            } else if (currentItem != null && currentItem.getTitle() != null) {
+                clubNameForChat = currentItem.getTitle();
+            }
+        }
+        if (clubNameForChat == null || clubNameForChat.isEmpty()) {
+            clubNameForChat = "동아리";
+        }
+
+        final String finalClubId = clubId;
+        final String finalClubName = clubNameForChat;
+
+        progressBar.setVisibility(View.VISIBLE);
+
+        // 동아리 관리자(회장) 찾기
+        firebaseManager.getClubMembers(clubId, new FirebaseManager.MembersCallback() {
+            @Override
+            public void onSuccess(java.util.List<com.example.clubmanagement.models.Member> members) {
+                com.example.clubmanagement.models.Member adminMember = null;
+
+                // 회장 또는 admin 역할 찾기
+                for (com.example.clubmanagement.models.Member member : members) {
+                    String role = member.getRole();
+                    if (member.isAdmin() || "회장".equals(role) || "admin".equals(role)) {
+                        // 본인이 아닌 관리자 찾기
+                        if (!member.getUserId().equals(currentUserId)) {
+                            adminMember = member;
+                            break;
+                        }
+                    }
+                }
+
+                if (adminMember == null) {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(DetailActivity.this, "관리자를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                final com.example.clubmanagement.models.Member finalAdmin = adminMember;
+                String adminName = finalAdmin.getName();
+                if (adminName == null || adminName.isEmpty()) {
+                    adminName = "관리자";
+                } else if (adminName.contains("@")) {
+                    adminName = adminName.substring(0, adminName.indexOf("@"));
+                }
+
+                final String displayAdminName = adminName;
+
+                // 채팅방 생성 또는 가져오기
+                firebaseManager.createOrGetChatRoom(
+                        finalAdmin.getUserId(),
+                        finalAdmin.getName(),
+                        finalAdmin.getRole() != null ? finalAdmin.getRole() : "회장",
+                        finalClubId,
+                        finalClubName,
+                        new FirebaseManager.ChatRoomCallback() {
+                            @Override
+                            public void onSuccess(com.example.clubmanagement.models.ChatRoom chatRoom) {
+                                progressBar.setVisibility(View.GONE);
+                                Toast.makeText(DetailActivity.this,
+                                        displayAdminName + " 관리자와의 채팅방으로 이동합니다", Toast.LENGTH_SHORT).show();
+
+                                // ChatDetailActivity로 이동
+                                Intent intent = new Intent(DetailActivity.this, ChatDetailActivity.class);
+                                intent.putExtra("chat_room_id", chatRoom.getChatRoomId());
+                                intent.putExtra("partner_user_id", finalAdmin.getUserId());
+                                intent.putExtra("partner_name", finalAdmin.getName());
+                                intent.putExtra("partner_role", finalAdmin.getRole());
+                                intent.putExtra("club_name", finalClubName);
+                                intent.putExtra("is_group_chat", false);
+                                startActivity(intent);
+                            }
+
+                            @Override
+                            public void onFailure(Exception e) {
+                                progressBar.setVisibility(View.GONE);
+                                Toast.makeText(DetailActivity.this,
+                                        "채팅방 생성 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                );
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(DetailActivity.this,
+                        "관리자 정보 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void openSuperAdminSettings() {

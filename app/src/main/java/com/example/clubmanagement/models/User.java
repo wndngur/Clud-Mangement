@@ -73,6 +73,15 @@ public class User {
         this.uid = uid;
     }
 
+    // Alias for uid - useful for compatibility
+    public String getUserId() {
+        return uid;
+    }
+
+    public void setUserId(String userId) {
+        this.uid = userId;
+    }
+
     public String getName() {
         return name;
     }

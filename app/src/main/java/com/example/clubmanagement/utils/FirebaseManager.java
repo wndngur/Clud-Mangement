@@ -5155,7 +5155,16 @@ public class FirebaseManager {
                         String clubId = doc.getString("clubId");
                         String clubName = doc.getString("clubName");
                         String lastMessage = doc.getString("lastMessage");
-                        Long lastMessageTime = doc.getLong("lastMessageTime");
+                        // lastMessageTime 처리 (Long 또는 Timestamp 타입 모두 처리)
+                        Object lastMessageTimeObj = doc.get("lastMessageTime");
+                        Long lastMessageTime = 0L;
+                        if (lastMessageTimeObj instanceof Long) {
+                            lastMessageTime = (Long) lastMessageTimeObj;
+                        } else if (lastMessageTimeObj instanceof Number) {
+                            lastMessageTime = ((Number) lastMessageTimeObj).longValue();
+                        } else if (lastMessageTimeObj instanceof com.google.firebase.Timestamp) {
+                            lastMessageTime = ((com.google.firebase.Timestamp) lastMessageTimeObj).toDate().getTime();
+                        }
                         Long unreadCount = doc.getLong("unreadCount");
                         Boolean notificationEnabled = doc.getBoolean("notificationEnabled");
                         String leftUserId = doc.getString("leftUserId");
@@ -5163,7 +5172,7 @@ public class FirebaseManager {
                         chatRoom.setClubId(clubId);
                         chatRoom.setClubName(clubName != null ? clubName : "");
                         chatRoom.setLastMessage(lastMessage != null ? lastMessage : "");
-                        chatRoom.setLastMessageTime(lastMessageTime != null ? lastMessageTime : 0);
+                        chatRoom.setLastMessageTime(lastMessageTime);
                         chatRoom.setUnreadCount(unreadCount != null ? unreadCount.intValue() : 0);
                         chatRoom.setNotificationEnabled(notificationEnabled != null ? notificationEnabled : true);
 
@@ -5173,8 +5182,9 @@ public class FirebaseManager {
                         // 단체 채팅방 여부 확인 (chatRoomId가 "group_"로 시작하면 단체 채팅방)
                         if (docId.startsWith("group_")) {
                             chatRoom.setGroupChat(true);
-                            Long memberCount = doc.getLong("memberCount");
-                            chatRoom.setMemberCount(memberCount != null ? memberCount.intValue() : 0);
+                            // participants 배열의 실제 크기를 멤버 수로 사용 (더 정확함)
+                            int actualMemberCount = (participantsList != null) ? participantsList.size() : 0;
+                            chatRoom.setMemberCount(actualMemberCount);
                         } else {
                             // 개인 채팅방
                             chatRoom.setGroupChat(false);
@@ -5591,5 +5601,40 @@ public class FirebaseManager {
     public interface RoleCallback {
         void onSuccess(String role);
         void onFailure(Exception e);
+    }
+
+    // ========================================
+    // Users List Callback and Methods
+    // ========================================
+
+    public interface UsersCallback {
+        void onSuccess(java.util.List<com.example.clubmanagement.models.User> users);
+        void onFailure(Exception e);
+    }
+
+    public interface ClubsCallback {
+        void onSuccess(java.util.List<com.example.clubmanagement.models.Club> clubs);
+        void onFailure(Exception e);
+    }
+
+    /**
+     * Get all super admins (users with isSuperAdmin = true)
+     */
+    public void getAllSuperAdmins(UsersCallback callback) {
+        db.collection("users")
+                .whereEqualTo("superAdmin", true)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    java.util.List<com.example.clubmanagement.models.User> superAdmins = new java.util.ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        com.example.clubmanagement.models.User user = doc.toObject(com.example.clubmanagement.models.User.class);
+                        if (user != null) {
+                            user.setUserId(doc.getId());
+                            superAdmins.add(user);
+                        }
+                    }
+                    callback.onSuccess(superAdmins);
+                })
+                .addOnFailureListener(callback::onFailure);
     }
 }

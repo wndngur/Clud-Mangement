@@ -2,12 +2,19 @@ package com.example.clubmanagement.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
-import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,6 +28,7 @@ import com.example.clubmanagement.adapters.ChatRoomAdapter;
 import com.example.clubmanagement.models.ChatRoom;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.List;
 
@@ -30,10 +38,15 @@ public class ChatActivity extends BaseActivity {
     private LinearLayout llEmptyState;
     private ProgressBar progressBar;
     private BottomNavigationView bottomNavigation;
-    private Button btnTabList, btnTabChat;
+    private LinearLayout tabFriends, tabChat;
+    private ImageView ivTabFriends, ivTabChat;
+    private TextView tvTabFriends, tvTabChat, tvEmptyTitle, tvEmptySubtitle;
+    private EditText etSearch;
+    private ImageButton btnClearSearch;
 
     private FirebaseManager firebaseManager;
     private ChatRoomAdapter chatRoomAdapter;
+    private ActivityResultLauncher<Intent> chatDetailLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +61,19 @@ public class ChatActivity extends BaseActivity {
 
         firebaseManager = FirebaseManager.getInstance();
 
+        // ChatDetailActivity에서 돌아올 때 결과 처리
+        chatDetailLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        // 채팅방에서 나가기 등의 변경이 있었을 때 목록 새로고침
+                        loadChatRooms();
+                    }
+                }
+        );
+
         initViews();
+        setupSearch();
         setupTabNavigation();
         setupBottomNavigation();
         loadChatRooms();
@@ -59,25 +84,68 @@ public class ChatActivity extends BaseActivity {
         llEmptyState = findViewById(R.id.llEmptyState);
         progressBar = findViewById(R.id.progressBar);
         bottomNavigation = findViewById(R.id.bottomNavigation);
-        btnTabList = findViewById(R.id.btnTabList);
-        btnTabChat = findViewById(R.id.btnTabChat);
+        tabFriends = findViewById(R.id.tabFriends);
+        tabChat = findViewById(R.id.tabChat);
+        ivTabFriends = findViewById(R.id.ivTabFriends);
+        ivTabChat = findViewById(R.id.ivTabChat);
+        tvTabFriends = findViewById(R.id.tvTabFriends);
+        tvTabChat = findViewById(R.id.tvTabChat);
+        tvEmptyTitle = findViewById(R.id.tvEmptyTitle);
+        tvEmptySubtitle = findViewById(R.id.tvEmptySubtitle);
+        etSearch = findViewById(R.id.etSearch);
+        btnClearSearch = findViewById(R.id.btnClearSearch);
 
         // ChatRoomAdapter 설정
         chatRoomAdapter = new ChatRoomAdapter();
         chatRoomAdapter.setOnChatRoomClickListener(this::onChatRoomClick);
-        chatRoomAdapter.setOnChatRoomSettingsListener(new ChatRoomAdapter.OnChatRoomSettingsListener() {
+        chatRoomAdapter.setOnChatRoomLongClickListener(this::showChatRoomOptionsDialog);
+        rvChatRooms.setLayoutManager(new LinearLayoutManager(this));
+        rvChatRooms.setAdapter(chatRoomAdapter);
+    }
+
+    private void setupSearch() {
+        etSearch.addTextChangedListener(new TextWatcher() {
             @Override
-            public void onToggleNotification(ChatRoom chatRoom, int position) {
-                toggleNotification(chatRoom, position);
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString();
+                chatRoomAdapter.filter(query);
+
+                // X 버튼 표시/숨김
+                btnClearSearch.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+
+                // 검색 결과에 따라 빈 상태 업데이트
+                updateEmptyState();
             }
 
             @Override
-            public void onDeleteChatRoom(ChatRoom chatRoom, int position) {
-                showDeleteConfirmDialog(chatRoom, position);
-            }
+            public void afterTextChanged(Editable s) {}
         });
-        rvChatRooms.setLayoutManager(new LinearLayoutManager(this));
-        rvChatRooms.setAdapter(chatRoomAdapter);
+
+        btnClearSearch.setOnClickListener(v -> {
+            etSearch.setText("");
+            etSearch.clearFocus();
+        });
+    }
+
+    private void updateEmptyState() {
+        if (chatRoomAdapter.getItemCount() == 0) {
+            llEmptyState.setVisibility(View.VISIBLE);
+            rvChatRooms.setVisibility(View.GONE);
+
+            if (chatRoomAdapter.hasNoResults()) {
+                tvEmptyTitle.setText("검색 결과가 없습니다");
+                tvEmptySubtitle.setText("다른 검색어로 시도해보세요");
+            } else {
+                tvEmptyTitle.setText("참여 중인 채팅방이 없습니다");
+                tvEmptySubtitle.setText("동아리에 가입하면 채팅방이 생성됩니다");
+            }
+        } else {
+            llEmptyState.setVisibility(View.GONE);
+            rvChatRooms.setVisibility(View.VISIBLE);
+        }
     }
 
     private void onChatRoomClick(ChatRoom chatRoom) {
@@ -88,7 +156,42 @@ public class ChatActivity extends BaseActivity {
         intent.putExtra("partner_role", chatRoom.getPartnerRole());
         intent.putExtra("club_name", chatRoom.getClubName());
         intent.putExtra("is_group_chat", chatRoom.isGroupChat());
-        startActivity(intent);
+        chatDetailLauncher.launch(intent);
+    }
+
+    // 길게 터치 시 설정 다이얼로그 표시
+    private void showChatRoomOptionsDialog(ChatRoom chatRoom, int position) {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_chat_room_options, null);
+        dialog.setContentView(view);
+
+        TextView tvChatRoomName = view.findViewById(R.id.tvChatRoomName);
+        LinearLayout layoutNotification = view.findViewById(R.id.layoutNotification);
+        LinearLayout layoutLeave = view.findViewById(R.id.layoutLeave);
+        TextView tvNotificationText = view.findViewById(R.id.tvNotificationText);
+
+        tvChatRoomName.setText(chatRoom.getChatRoomTitle());
+
+        // 알림 상태에 따라 텍스트 변경
+        tvNotificationText.setText(chatRoom.isNotificationEnabled() ? "알림 끄기" : "알림 켜기");
+
+        // 알림 설정
+        layoutNotification.setOnClickListener(v -> {
+            dialog.dismiss();
+            toggleNotification(chatRoom, position);
+        });
+
+        // 채팅방 나가기 (단체 채팅방이 아닌 경우에만)
+        if (chatRoom.isGroupChat()) {
+            layoutLeave.setVisibility(View.GONE);
+        } else {
+            layoutLeave.setOnClickListener(v -> {
+                dialog.dismiss();
+                showLeaveConfirmDialog(chatRoom, position);
+            });
+        }
+
+        dialog.show();
     }
 
     private void toggleNotification(ChatRoom chatRoom, int position) {
@@ -108,10 +211,10 @@ public class ChatActivity extends BaseActivity {
         });
     }
 
-    private void showDeleteConfirmDialog(ChatRoom chatRoom, int position) {
+    private void showLeaveConfirmDialog(ChatRoom chatRoom, int position) {
         new AlertDialog.Builder(this)
                 .setTitle("채팅방 나가기")
-                .setMessage("채팅방을 나가시겠습니까?\n상대방에게 나갔음이 표시됩니다.")
+                .setMessage("채팅방을 나가시겠습니까?\n대화 내용이 삭제되며 상대방에게 나갔음이 표시됩니다.")
                 .setPositiveButton("나가기", (dialog, which) -> {
                     leaveChatRoom(chatRoom, position);
                 })
@@ -120,17 +223,14 @@ public class ChatActivity extends BaseActivity {
     }
 
     private void leaveChatRoom(ChatRoom chatRoom, int position) {
-        firebaseManager.leaveChatRoom(chatRoom.getChatRoomId(), new FirebaseManager.SimpleCallback() {
+        String chatRoomId = chatRoom.getChatRoomId();
+        firebaseManager.leaveChatRoom(chatRoomId, new FirebaseManager.SimpleCallback() {
             @Override
             public void onSuccess() {
-                chatRoomAdapter.removeChatRoom(position);
+                // ID로 채팅방 제거 (더 안정적)
+                chatRoomAdapter.removeChatRoomById(chatRoomId);
                 Toast.makeText(ChatActivity.this, "채팅방을 나갔습니다", Toast.LENGTH_SHORT).show();
-
-                // 채팅방이 없으면 빈 상태 표시
-                if (chatRoomAdapter.getItemCount() == 0) {
-                    llEmptyState.setVisibility(View.VISIBLE);
-                    rvChatRooms.setVisibility(View.GONE);
-                }
+                updateEmptyState();
             }
 
             @Override
@@ -141,16 +241,16 @@ public class ChatActivity extends BaseActivity {
     }
 
     private void setupTabNavigation() {
-        // 목록 버튼 - 목록 화면으로 이동
-        btnTabList.setOnClickListener(v -> {
+        // 친구 탭 - 친구 화면으로 이동
+        tabFriends.setOnClickListener(v -> {
             Intent intent = new Intent(ChatActivity.this, ChatListActivity.class);
             startActivity(intent);
             finish();
             overridePendingTransition(0, 0);
         });
 
-        // 채팅 버튼 - 현재 화면
-        btnTabChat.setOnClickListener(v -> {
+        // 채팅 탭 - 현재 화면
+        tabChat.setOnClickListener(v -> {
             // 이미 채팅 화면
         });
     }

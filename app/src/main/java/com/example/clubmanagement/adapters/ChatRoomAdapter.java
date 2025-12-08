@@ -3,9 +3,7 @@ package com.example.clubmanagement.adapters;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -23,35 +21,66 @@ import java.util.Locale;
 public class ChatRoomAdapter extends RecyclerView.Adapter<ChatRoomAdapter.ChatRoomViewHolder> {
 
     private List<ChatRoom> chatRooms = new ArrayList<>();
+    private List<ChatRoom> filteredChatRooms = new ArrayList<>();
     private OnChatRoomClickListener listener;
-    private OnChatRoomSettingsListener settingsListener;
+    private OnChatRoomLongClickListener longClickListener;
+    private String currentFilter = "";
 
     public interface OnChatRoomClickListener {
         void onChatRoomClick(ChatRoom chatRoom);
     }
 
-    public interface OnChatRoomSettingsListener {
-        void onToggleNotification(ChatRoom chatRoom, int position);
-        void onDeleteChatRoom(ChatRoom chatRoom, int position);
+    public interface OnChatRoomLongClickListener {
+        void onChatRoomLongClick(ChatRoom chatRoom, int position);
     }
 
     public void setChatRooms(List<ChatRoom> chatRooms) {
-        this.chatRooms = chatRooms;
-        notifyDataSetChanged();
+        this.chatRooms = new ArrayList<>(chatRooms);
+        applyFilter();
     }
 
     public void setOnChatRoomClickListener(OnChatRoomClickListener listener) {
         this.listener = listener;
     }
 
-    public void setOnChatRoomSettingsListener(OnChatRoomSettingsListener listener) {
-        this.settingsListener = listener;
+    public void setOnChatRoomLongClickListener(OnChatRoomLongClickListener listener) {
+        this.longClickListener = listener;
     }
 
     public void removeChatRoom(int position) {
-        if (position >= 0 && position < chatRooms.size()) {
-            chatRooms.remove(position);
+        if (position >= 0 && position < filteredChatRooms.size()) {
+            ChatRoom removed = filteredChatRooms.get(position);
+            chatRooms.remove(removed);
+            filteredChatRooms.remove(position);
             notifyItemRemoved(position);
+        }
+    }
+
+    public void removeChatRoomById(String chatRoomId) {
+        // 원본 목록에서 제거
+        ChatRoom toRemove = null;
+        for (ChatRoom chatRoom : chatRooms) {
+            if (chatRoom.getChatRoomId() != null && chatRoom.getChatRoomId().equals(chatRoomId)) {
+                toRemove = chatRoom;
+                break;
+            }
+        }
+        if (toRemove != null) {
+            chatRooms.remove(toRemove);
+        }
+
+        // 필터된 목록에서 제거
+        int removePosition = -1;
+        for (int i = 0; i < filteredChatRooms.size(); i++) {
+            ChatRoom chatRoom = filteredChatRooms.get(i);
+            if (chatRoom.getChatRoomId() != null && chatRoom.getChatRoomId().equals(chatRoomId)) {
+                removePosition = i;
+                break;
+            }
+        }
+        if (removePosition >= 0) {
+            filteredChatRooms.remove(removePosition);
+            notifyItemRemoved(removePosition);
         }
     }
 
@@ -59,11 +88,48 @@ public class ChatRoomAdapter extends RecyclerView.Adapter<ChatRoomAdapter.ChatRo
         // 중복 체크
         for (ChatRoom existing : chatRooms) {
             if (existing.getChatRoomId().equals(chatRoom.getChatRoomId())) {
-                return; // 이미 존재하면 추가하지 않음
+                return;
             }
         }
-        chatRooms.add(0, chatRoom); // 최신 채팅방을 맨 위에 추가
-        notifyItemInserted(0);
+        chatRooms.add(0, chatRoom);
+        applyFilter();
+    }
+
+    // 검색 필터 적용
+    public void filter(String query) {
+        this.currentFilter = query != null ? query.toLowerCase().trim() : "";
+        applyFilter();
+    }
+
+    private void applyFilter() {
+        filteredChatRooms.clear();
+
+        if (currentFilter.isEmpty()) {
+            filteredChatRooms.addAll(chatRooms);
+        } else {
+            for (ChatRoom chatRoom : chatRooms) {
+                // 채팅방 이름, 파트너 이름, 동아리 이름으로 검색
+                String title = chatRoom.getChatRoomTitle() != null ? chatRoom.getChatRoomTitle().toLowerCase() : "";
+                String partnerName = chatRoom.getPartnerName() != null ? chatRoom.getPartnerName().toLowerCase() : "";
+                String clubName = chatRoom.getClubName() != null ? chatRoom.getClubName().toLowerCase() : "";
+
+                if (title.contains(currentFilter) ||
+                    partnerName.contains(currentFilter) ||
+                    clubName.contains(currentFilter)) {
+                    filteredChatRooms.add(chatRoom);
+                }
+            }
+        }
+
+        notifyDataSetChanged();
+    }
+
+    public boolean isEmpty() {
+        return filteredChatRooms.isEmpty();
+    }
+
+    public boolean hasNoResults() {
+        return !currentFilter.isEmpty() && filteredChatRooms.isEmpty();
     }
 
     @NonNull
@@ -76,19 +142,18 @@ public class ChatRoomAdapter extends RecyclerView.Adapter<ChatRoomAdapter.ChatRo
 
     @Override
     public void onBindViewHolder(@NonNull ChatRoomViewHolder holder, int position) {
-        ChatRoom chatRoom = chatRooms.get(position);
-        holder.bind(chatRoom, position, listener, settingsListener);
+        ChatRoom chatRoom = filteredChatRooms.get(position);
+        holder.bind(chatRoom, position, listener, longClickListener);
     }
 
     @Override
     public int getItemCount() {
-        return chatRooms.size();
+        return filteredChatRooms.size();
     }
 
     static class ChatRoomViewHolder extends RecyclerView.ViewHolder {
         ImageView ivProfile;
         TextView tvChatRoomName, tvClubName, tvLastMessage, tvTime, tvUnreadCount;
-        ImageButton btnSettings;
 
         ChatRoomViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -98,10 +163,9 @@ public class ChatRoomAdapter extends RecyclerView.Adapter<ChatRoomAdapter.ChatRo
             tvLastMessage = itemView.findViewById(R.id.tvLastMessage);
             tvTime = itemView.findViewById(R.id.tvTime);
             tvUnreadCount = itemView.findViewById(R.id.tvUnreadCount);
-            btnSettings = itemView.findViewById(R.id.btnSettings);
         }
 
-        void bind(ChatRoom chatRoom, int position, OnChatRoomClickListener listener, OnChatRoomSettingsListener settingsListener) {
+        void bind(ChatRoom chatRoom, int position, OnChatRoomClickListener listener, OnChatRoomLongClickListener longClickListener) {
             // 채팅방 이름 설정
             tvChatRoomName.setText(chatRoom.getChatRoomTitle());
 
@@ -109,39 +173,49 @@ public class ChatRoomAdapter extends RecyclerView.Adapter<ChatRoomAdapter.ChatRo
             if (chatRoom.isGroupChat()) {
                 // 멤버 수 표시
                 String memberInfo = chatRoom.getMemberCount() > 0
-                        ? "멤버 " + chatRoom.getMemberCount() + "명"
-                        : "단체 채팅";
-                tvClubName.setText(memberInfo);
+                        ? chatRoom.getMemberCount() + ""
+                        : "";
+                if (!memberInfo.isEmpty()) {
+                    tvChatRoomName.setText(chatRoom.getChatRoomTitle() + " " + memberInfo);
+                }
+
+                tvClubName.setVisibility(View.GONE);
 
                 // 마지막 메시지
                 String lastMsg = chatRoom.getLastMessage();
                 if (lastMsg == null || lastMsg.isEmpty()) {
                     tvLastMessage.setText("새로운 단체 채팅방입니다");
-                    tvLastMessage.setTextColor(0xFF757575);
+                    tvLastMessage.setTextColor(0xFF888888);
                 } else {
                     tvLastMessage.setText(lastMsg);
-                    tvLastMessage.setTextColor(0xFF757575);
+                    tvLastMessage.setTextColor(0xFF888888);
                 }
             } else {
                 // 개인 채팅방인 경우
-                // 동아리 이름 (직급 정보도 표시)
-                String clubInfo = chatRoom.getClubName() != null ? chatRoom.getClubName() : "";
-                if (chatRoom.getPartnerRole() != null && !chatRoom.getPartnerRole().isEmpty()) {
-                    clubInfo += " " + chatRoom.getPartnerRole();
+                // 동아리 이름과 직급 정보
+                String clubInfo = "";
+                if (chatRoom.getClubName() != null && !chatRoom.getClubName().isEmpty()) {
+                    clubInfo = chatRoom.getClubName();
+                    if (chatRoom.getPartnerRole() != null && !chatRoom.getPartnerRole().isEmpty()) {
+                        clubInfo += " · " + chatRoom.getPartnerRole();
+                    }
+                    tvClubName.setText(clubInfo);
+                    tvClubName.setVisibility(View.VISIBLE);
+                } else {
+                    tvClubName.setVisibility(View.GONE);
                 }
-                tvClubName.setText(clubInfo);
 
                 // 마지막 메시지 또는 나간 사용자 표시
                 String lastMsg = chatRoom.getLastMessage();
                 if (chatRoom.getLeftUserId() != null && !chatRoom.getLeftUserId().isEmpty()) {
                     tvLastMessage.setText("상대방이 나갔습니다");
-                    tvLastMessage.setTextColor(0xFFFF5722); // 주황색
+                    tvLastMessage.setTextColor(0xFFFF5722);
                 } else if (lastMsg == null || lastMsg.isEmpty()) {
                     tvLastMessage.setText("새로운 채팅방입니다");
-                    tvLastMessage.setTextColor(0xFF757575); // 기본 회색
+                    tvLastMessage.setTextColor(0xFF888888);
                 } else {
                     tvLastMessage.setText(lastMsg);
-                    tvLastMessage.setTextColor(0xFF757575); // 기본 회색
+                    tvLastMessage.setTextColor(0xFF888888);
                 }
             }
 
@@ -156,41 +230,20 @@ public class ChatRoomAdapter extends RecyclerView.Adapter<ChatRoomAdapter.ChatRo
                 tvUnreadCount.setVisibility(View.GONE);
             }
 
-            // 카드 클릭 리스너
+            // 클릭 리스너
             itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onChatRoomClick(chatRoom);
                 }
             });
 
-            // 설정 버튼 클릭 리스너
-            btnSettings.setOnClickListener(v -> {
-                PopupMenu popup = new PopupMenu(v.getContext(), v);
-
-                // 알림 끄기/켜기 메뉴
-                String notificationText = chatRoom.isNotificationEnabled() ? "알림 끄기" : "알림 켜기";
-                popup.getMenu().add(0, 1, 0, notificationText);
-
-                // 단체 채팅방이 아닌 경우에만 나가기 메뉴 표시
-                if (!chatRoom.isGroupChat()) {
-                    popup.getMenu().add(0, 2, 1, "채팅방 나가기");
+            // 길게 터치 리스너
+            itemView.setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    longClickListener.onChatRoomLongClick(chatRoom, position);
+                    return true;
                 }
-
-                popup.setOnMenuItemClickListener(item -> {
-                    if (settingsListener != null) {
-                        switch (item.getItemId()) {
-                            case 1:
-                                settingsListener.onToggleNotification(chatRoom, position);
-                                return true;
-                            case 2:
-                                settingsListener.onDeleteChatRoom(chatRoom, position);
-                                return true;
-                        }
-                    }
-                    return false;
-                });
-
-                popup.show();
+                return false;
             });
         }
 
@@ -201,7 +254,7 @@ public class ChatRoomAdapter extends RecyclerView.Adapter<ChatRoomAdapter.ChatRo
             Date now = new Date();
 
             SimpleDateFormat todayFormat = new SimpleDateFormat("a h:mm", Locale.KOREA);
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd", Locale.KOREA);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("M월 d일", Locale.KOREA);
 
             // 오늘인지 확인
             SimpleDateFormat dayFormat = new SimpleDateFormat("yyyyMMdd", Locale.KOREA);

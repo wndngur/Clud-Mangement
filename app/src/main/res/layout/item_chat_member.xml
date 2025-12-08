@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="8dp">
+
+    <!-- 프로필 이미지 -->
+    <ImageView
+        android:id="@+id/ivMemberProfile"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@drawable/placeholder_profile"
+        android:scaleType="centerCrop"
+        android:background="@drawable/profile_circle_background"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="12dp">
+
+        <TextView
+            android:id="@+id/tvMemberName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="멤버 이름"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvMemberRole"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="회원"
+            android:textSize="12sp"
+            android:textColor="#888888"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+
+    <!-- 채팅 정지 상태 표시 -->
+    <TextView
+        android:id="@+id/tvMuted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="정지"
+        android:textSize="11sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/badge_muted"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:layout_marginEnd="8dp"
+        android:visibility="gone"/>
+
+    <!-- 본인 표시 -->
+    <TextView
+        android:id="@+id/tvIsMe"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="나"
+        android:textSize="12sp"
+        android:textColor="#7C4DFF"
+        android:background="@drawable/badge_me"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:visibility="gone"/>
+
+</LinearLayout>

@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#FFFFFF"
     tools:context=".activities.ChatListActivity">
 
     <!-- Transparent Status Bar Spacer -->
@@ -17,56 +18,170 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Top Bar with Tab Navigation -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/topBar"
+    <!-- 상단 탭 네비게이션 -->
+    <LinearLayout
+        android:id="@+id/topTabLayout"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@android:color/white"
-        android:elevation="4dp"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
         app:layout_constraintTop_toBottomOf="@id/statusBarSpacer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- 상단 탭 네비게이션 (중앙 1/3) -->
+        <!-- 친구 탭 -->
         <LinearLayout
-            android:id="@+id/tabNavigation"
+            android:id="@+id/tabFriends"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
             android:orientation="horizontal"
-            android:background="@drawable/tab_background"
-            android:padding="2dp"
-            app:layout_constraintWidth_percent="0.5"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
 
-            <Button
-                android:id="@+id/btnTabList"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="목록"
-                android:textSize="14sp"
-                android:textColor="@android:color/white"
-                android:background="@drawable/tab_selected_background"
-                android:stateListAnimator="@null"/>
+            <ImageView
+                android:id="@+id/ivTabFriends"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_people_outline"
+                app:tint="#3B82F6"/>
 
-            <Button
-                android:id="@+id/btnTabChat"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="채팅"
-                android:textSize="14sp"
-                android:textColor="@android:color/darker_gray"
-                android:background="@android:color/transparent"
-                android:stateListAnimator="@null"/>
+            <TextView
+                android:id="@+id/tvTabFriends"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="친구"
+                android:textSize="15sp"
+                android:textColor="#3B82F6"
+                android:textStyle="bold"/>
 
         </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- 채팅 탭 -->
+        <LinearLayout
+            android:id="@+id/tabChat"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivTabChat"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_chat_bubble_outline"
+                app:tint="#888888"/>
+
+            <TextView
+                android:id="@+id/tvTabChat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="채팅"
+                android:textSize="15sp"
+                android:textColor="#888888"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 탭 인디케이터 -->
+    <View
+        android:id="@+id/tabIndicator"
+        android:layout_width="0dp"
+        android:layout_height="2dp"
+        android:background="#3B82F6"
+        app:layout_constraintTop_toBottomOf="@id/topTabLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintWidth_percent="0.5"/>
+
+    <!-- 구분선 -->
+    <View
+        android:id="@+id/dividerLine"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        app:layout_constraintTop_toBottomOf="@id/tabIndicator"/>
+
+    <!-- 친구 헤더 -->
+    <LinearLayout
+        android:id="@+id/friendsHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:background="#FFFFFF"
+        app:layout_constraintTop_toBottomOf="@id/dividerLine"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="친구"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#000000"/>
+
+    </LinearLayout>
+
+    <!-- 검색창 -->
+    <LinearLayout
+        android:id="@+id/searchLayout"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/search_background"
+        android:paddingHorizontal="12dp"
+        app:layout_constraintTop_toBottomOf="@id/friendsHeader"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_search"
+            app:tint="#888888"/>
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:background="@null"
+            android:hint="친구 검색"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:textColorHint="#888888"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:maxLines="1"/>
+
+        <ImageButton
+            android:id="@+id/btnClearSearch"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_close"
+            android:visibility="gone"
+            android:contentDescription="검색 지우기"
+            app:tint="#888888"/>
+
+    </LinearLayout>
 
     <!-- Club Member List -->
     <androidx.recyclerview.widget.RecyclerView
@@ -74,9 +189,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        app:layout_constraintTop_toBottomOf="@id/topBar"
+        android:background="#FFFFFF"
+        app:layout_constraintTop_toBottomOf="@id/searchLayout"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -89,7 +204,7 @@
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintTop_toBottomOf="@id/searchLayout"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -102,6 +217,7 @@
             android:contentDescription="목록 없음"/>
 
         <TextView
+            android:id="@+id/tvEmptyTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -110,6 +226,7 @@
             android:textColor="@android:color/darker_gray"/>
 
         <TextView
+            android:id="@+id/tvEmptySubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"

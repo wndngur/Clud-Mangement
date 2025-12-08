@@ -9,6 +9,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.example.clubmanagement.activities.ChatActivity;
 import com.example.clubmanagement.activities.ClubListActivity;
 import com.example.clubmanagement.activities.ClubMainActivity;
 import com.example.clubmanagement.activities.ClubRecommendActivity;
@@ -189,6 +190,10 @@ public class AdminMainActivity extends AppCompatActivity {
 
             if (itemId == R.id.nav_home) {
                 // 현재 화면이므로 아무것도 하지 않음
+                return true;
+            } else if (itemId == R.id.nav_chat) {
+                Intent intent = new Intent(AdminMainActivity.this, ChatActivity.class);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.nav_clubs) {
                 Intent intent = new Intent(AdminMainActivity.this, ClubListActivity.class);

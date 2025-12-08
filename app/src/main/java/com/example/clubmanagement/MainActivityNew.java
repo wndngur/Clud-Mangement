@@ -44,6 +44,11 @@ public class MainActivityNew extends BaseActivity {
 
         firebaseManager = FirebaseManager.getInstance();
 
+        // 채팅 알림 리스너 시작 (로그인된 경우)
+        if (firebaseManager.getCurrentUserId() != null) {
+            getChatNotificationManager().startListening();
+        }
+
         // 중앙동아리 가입 여부 확인
         checkCentralClubMembership();
     }

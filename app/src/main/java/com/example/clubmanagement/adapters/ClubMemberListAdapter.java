@@ -18,8 +18,10 @@ import java.util.List;
 
 public class ClubMemberListAdapter extends RecyclerView.Adapter<ClubMemberListAdapter.ClubViewHolder> {
 
-    private List<ClubWithMembers> clubList = new ArrayList<>();
+    private List<ClubWithMembers> originalClubList = new ArrayList<>();
+    private List<ClubWithMembers> filteredClubList = new ArrayList<>();
     private OnMemberClickListener memberClickListener;
+    private String currentFilter = "";
 
     public interface OnMemberClickListener {
         void onMemberClick(Member member, String clubId, String clubName);
@@ -29,21 +31,59 @@ public class ClubMemberListAdapter extends RecyclerView.Adapter<ClubMemberListAd
         public String clubId;
         public String clubName;
         public List<Member> members;
+        public List<Member> filteredMembers;
 
         public ClubWithMembers(String clubId, String clubName, List<Member> members) {
             this.clubId = clubId;
             this.clubName = clubName;
             this.members = members;
+            this.filteredMembers = new ArrayList<>(members);
+        }
+
+        public void applyFilter(String query) {
+            filteredMembers.clear();
+            if (query == null || query.isEmpty()) {
+                filteredMembers.addAll(members);
+            } else {
+                String lowerQuery = query.toLowerCase();
+                for (Member member : members) {
+                    String name = member.getName() != null ? member.getName().toLowerCase() : "";
+                    String role = member.getRole() != null ? member.getRole().toLowerCase() : "";
+                    if (name.contains(lowerQuery) || role.contains(lowerQuery)) {
+                        filteredMembers.add(member);
+                    }
+                }
+            }
         }
     }
 
     public void setClubList(List<ClubWithMembers> clubs) {
-        this.clubList = clubs;
-        notifyDataSetChanged();
+        this.originalClubList = new ArrayList<>(clubs);
+        applyFilter();
     }
 
     public void setOnMemberClickListener(OnMemberClickListener listener) {
         this.memberClickListener = listener;
+    }
+
+    // 검색 필터 적용
+    public void filter(String query) {
+        this.currentFilter = query != null ? query.trim() : "";
+        applyFilter();
+    }
+
+    private void applyFilter() {
+        filteredClubList.clear();
+
+        for (ClubWithMembers club : originalClubList) {
+            club.applyFilter(currentFilter);
+            // 필터 결과가 있는 클럽만 표시 (검색 중일 때)
+            if (currentFilter.isEmpty() || !club.filteredMembers.isEmpty()) {
+                filteredClubList.add(club);
+            }
+        }
+
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -56,13 +96,13 @@ public class ClubMemberListAdapter extends RecyclerView.Adapter<ClubMemberListAd
 
     @Override
     public void onBindViewHolder(@NonNull ClubViewHolder holder, int position) {
-        ClubWithMembers club = clubList.get(position);
-        holder.bind(club, memberClickListener);
+        ClubWithMembers club = filteredClubList.get(position);
+        holder.bind(club, memberClickListener, currentFilter);
     }
 
     @Override
     public int getItemCount() {
-        return clubList.size();
+        return filteredClubList.size();
     }
 
     static class ClubViewHolder extends RecyclerView.ViewHolder {
@@ -77,14 +117,29 @@ public class ClubMemberListAdapter extends RecyclerView.Adapter<ClubMemberListAd
             tvEmptyMessage = itemView.findViewById(R.id.tvEmptyMessage);
         }
 
-        void bind(ClubWithMembers club, OnMemberClickListener listener) {
+        void bind(ClubWithMembers club, OnMemberClickListener listener, String filter) {
             tvClubName.setText(club.clubName);
-            tvMemberCount.setText(club.members.size() + "명");
+
+            // 필터링된 멤버 수 표시
+            List<Member> displayMembers = club.filteredMembers;
+            int totalCount = club.members.size();
+            int filteredCount = displayMembers.size();
+
+            if (filter.isEmpty()) {
+                tvMemberCount.setText(totalCount + "명");
+            } else {
+                tvMemberCount.setText(filteredCount + "/" + totalCount + "명");
+            }
 
             // 멤버가 없으면 빈 메시지 표시
-            if (club.members.isEmpty()) {
+            if (displayMembers.isEmpty()) {
                 rvMembers.setVisibility(View.GONE);
                 tvEmptyMessage.setVisibility(View.VISIBLE);
+                if (!filter.isEmpty()) {
+                    tvEmptyMessage.setText("검색 결과가 없습니다");
+                } else {
+                    tvEmptyMessage.setText("채팅 가능한 부원이 없습니다");
+                }
             } else {
                 rvMembers.setVisibility(View.VISIBLE);
                 tvEmptyMessage.setVisibility(View.GONE);
@@ -93,7 +148,7 @@ public class ClubMemberListAdapter extends RecyclerView.Adapter<ClubMemberListAd
                 MemberSimpleAdapter adapter = new MemberSimpleAdapter(club.clubId, club.clubName, listener);
                 rvMembers.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
                 rvMembers.setAdapter(adapter);
-                adapter.setMembers(club.members);
+                adapter.setMembers(displayMembers);
             }
         }
     }

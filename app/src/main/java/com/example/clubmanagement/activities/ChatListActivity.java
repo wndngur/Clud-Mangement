@@ -2,10 +2,15 @@ package com.example.clubmanagement.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
-import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -31,10 +36,15 @@ public class ChatListActivity extends BaseActivity {
     private LinearLayout llEmptyState;
     private ProgressBar progressBar;
     private BottomNavigationView bottomNavigation;
-    private Button btnTabList, btnTabChat;
+    private LinearLayout tabFriends, tabChat;
+    private ImageView ivTabFriends, ivTabChat;
+    private TextView tvTabFriends, tvTabChat, tvEmptyTitle, tvEmptySubtitle;
+    private EditText etSearch;
+    private ImageButton btnClearSearch;
 
     private FirebaseManager firebaseManager;
     private ClubMemberListAdapter adapter;
+    private String currentSearchQuery = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,11 +54,20 @@ public class ChatListActivity extends BaseActivity {
             getSupportActionBar().hide();
         }
 
+        // 총관리자 모드면 SuperAdminChatListActivity로 이동
+        if (SettingsActivity.isSuperAdminMode(this)) {
+            Intent intent = new Intent(this, SuperAdminChatListActivity.class);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_chat_list);
 
         firebaseManager = FirebaseManager.getInstance();
 
         initViews();
+        setupSearch();
         setupTabNavigation();
         setupBottomNavigation();
         loadJoinedClubsWithMembers();
@@ -59,13 +78,66 @@ public class ChatListActivity extends BaseActivity {
         llEmptyState = findViewById(R.id.llEmptyState);
         progressBar = findViewById(R.id.progressBar);
         bottomNavigation = findViewById(R.id.bottomNavigation);
-        btnTabList = findViewById(R.id.btnTabList);
-        btnTabChat = findViewById(R.id.btnTabChat);
+        tabFriends = findViewById(R.id.tabFriends);
+        tabChat = findViewById(R.id.tabChat);
+        ivTabFriends = findViewById(R.id.ivTabFriends);
+        ivTabChat = findViewById(R.id.ivTabChat);
+        tvTabFriends = findViewById(R.id.tvTabFriends);
+        tvTabChat = findViewById(R.id.tvTabChat);
+        tvEmptyTitle = findViewById(R.id.tvEmptyTitle);
+        tvEmptySubtitle = findViewById(R.id.tvEmptySubtitle);
+        etSearch = findViewById(R.id.etSearch);
+        btnClearSearch = findViewById(R.id.btnClearSearch);
 
         adapter = new ClubMemberListAdapter();
         adapter.setOnMemberClickListener(this::showChatConfirmDialog);
         rvMemberList.setLayoutManager(new LinearLayoutManager(this));
         rvMemberList.setAdapter(adapter);
+    }
+
+    private void setupSearch() {
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                currentSearchQuery = s.toString();
+                adapter.filter(currentSearchQuery);
+
+                // X 버튼 표시/숨김
+                btnClearSearch.setVisibility(currentSearchQuery.isEmpty() ? View.GONE : View.VISIBLE);
+
+                // 검색 결과에 따라 빈 상태 업데이트
+                updateEmptyState();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        btnClearSearch.setOnClickListener(v -> {
+            etSearch.setText("");
+            etSearch.clearFocus();
+        });
+    }
+
+    private void updateEmptyState() {
+        if (adapter.getItemCount() == 0) {
+            llEmptyState.setVisibility(View.VISIBLE);
+            rvMemberList.setVisibility(View.GONE);
+
+            if (!currentSearchQuery.isEmpty()) {
+                tvEmptyTitle.setText("검색 결과가 없습니다");
+                tvEmptySubtitle.setText("다른 이름으로 검색해보세요");
+            } else {
+                tvEmptyTitle.setText("가입한 동아리가 없습니다");
+                tvEmptySubtitle.setText("동아리에 가입하면 부원 명단을 확인할 수 있습니다");
+            }
+        } else {
+            llEmptyState.setVisibility(View.GONE);
+            rvMemberList.setVisibility(View.VISIBLE);
+        }
     }
 
     private void showChatConfirmDialog(Member member, String clubId, String clubName) {
@@ -130,13 +202,13 @@ public class ChatListActivity extends BaseActivity {
     }
 
     private void setupTabNavigation() {
-        // 목록 버튼 - 현재 화면
-        btnTabList.setOnClickListener(v -> {
-            // 이미 목록 화면
+        // 친구 탭 - 현재 화면 (이미 선택됨)
+        tabFriends.setOnClickListener(v -> {
+            // 이미 친구 화면
         });
 
-        // 채팅 버튼 - 채팅 화면으로 이동
-        btnTabChat.setOnClickListener(v -> {
+        // 채팅 탭 - 채팅 화면으로 이동
+        tabChat.setOnClickListener(v -> {
             Intent intent = new Intent(ChatListActivity.this, ChatActivity.class);
             startActivity(intent);
             finish();
