@@ -371,15 +371,13 @@ public class ChatActivity extends BaseActivity {
         firebaseManager.getChatRooms(new FirebaseManager.ChatRoomsCallback() {
             @Override
             public void onSuccess(List<ChatRoom> chatRooms) {
-                progressBar.setVisibility(View.GONE);
-
                 if (chatRooms == null || chatRooms.isEmpty()) {
+                    progressBar.setVisibility(View.GONE);
                     llEmptyState.setVisibility(View.VISIBLE);
                     rvChatRooms.setVisibility(View.GONE);
                 } else {
-                    llEmptyState.setVisibility(View.GONE);
-                    rvChatRooms.setVisibility(View.VISIBLE);
-                    chatRoomAdapter.setChatRooms(chatRooms);
+                    // 각 채팅방의 읽지 않은 메시지 수 계산
+                    calculateUnreadCountsForRooms(chatRooms);
                 }
             }
 
@@ -391,6 +389,66 @@ public class ChatActivity extends BaseActivity {
                 Toast.makeText(ChatActivity.this, "채팅방 목록 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void calculateUnreadCountsForRooms(List<ChatRoom> chatRooms) {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            progressBar.setVisibility(View.GONE);
+            llEmptyState.setVisibility(View.GONE);
+            rvChatRooms.setVisibility(View.VISIBLE);
+            chatRoomAdapter.setChatRooms(chatRooms);
+            return;
+        }
+
+        final int[] processedCount = {0};
+        int totalRooms = chatRooms.size();
+
+        for (ChatRoom chatRoom : chatRooms) {
+            String chatRoomId = chatRoom.getChatRoomId();
+            long lastReadTime = getChatNotificationManager().getLastReadTimestamp(chatRoomId);
+
+            // 마지막 읽은 시간 이후의 메시지 중 내가 보내지 않은 메시지 수 계산
+            firebaseManager.getDb()
+                    .collection("chatRooms")
+                    .document(chatRoomId)
+                    .collection("messages")
+                    .whereGreaterThan("timestamp", lastReadTime)
+                    .get()
+                    .addOnSuccessListener(messagesSnapshot -> {
+                        int unreadCount = 0;
+                        for (com.google.firebase.firestore.DocumentSnapshot msgDoc : messagesSnapshot.getDocuments()) {
+                            String senderId = msgDoc.getString("senderId");
+                            // 내가 보낸 메시지가 아닌 경우만 카운트
+                            if (senderId != null && !senderId.equals(currentUserId)) {
+                                unreadCount++;
+                            }
+                        }
+                        chatRoom.setUnreadCount(unreadCount);
+
+                        processedCount[0]++;
+                        if (processedCount[0] >= totalRooms) {
+                            // 모든 채팅방 처리 완료
+                            runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
+                                llEmptyState.setVisibility(View.GONE);
+                                rvChatRooms.setVisibility(View.VISIBLE);
+                                chatRoomAdapter.setChatRooms(chatRooms);
+                            });
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        processedCount[0]++;
+                        if (processedCount[0] >= totalRooms) {
+                            runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
+                                llEmptyState.setVisibility(View.GONE);
+                                rvChatRooms.setVisibility(View.VISIBLE);
+                                chatRoomAdapter.setChatRooms(chatRooms);
+                            });
+                        }
+                    });
+        }
     }
 
     @Override

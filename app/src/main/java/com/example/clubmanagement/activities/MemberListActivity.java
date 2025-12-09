@@ -7,11 +7,11 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.adapters.MemberSimpleAdapter;
 import com.example.clubmanagement.models.Member;
@@ -20,7 +20,7 @@ import com.example.clubmanagement.utils.FirebaseManager;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MemberListActivity extends AppCompatActivity {
+public class MemberListActivity extends BaseActivity {
 
     private FirebaseManager firebaseManager;
     private String clubId;

@@ -21,7 +21,6 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -29,6 +28,7 @@ import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.Club;
 import com.example.clubmanagement.models.Member;
@@ -54,7 +54,7 @@ import java.util.Map;
 /**
  * PDF 신청서 생성 Activity
  */
-public class PdfGenerationActivity extends AppCompatActivity {
+public class PdfGenerationActivity extends BaseActivity {
 
     private static final int REQUEST_STORAGE_PERMISSION = 100;
     private static final int REQUEST_SIGNATURE = 200;

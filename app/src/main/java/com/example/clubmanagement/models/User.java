@@ -16,6 +16,7 @@ public class User {
     private List<String> generalClubIds; // 가입한 일반 동아리 ID 목록
     private List<String> generalClubNames; // 가입한 일반 동아리 이름 목록
     private List<ExpulsionRecord> expulsionHistory; // 퇴출 이력
+    private int themePreference;    // 테마 설정 (0: 오리지널, 1: 블랙앤화이트, 2: 흑백)
 
     /**
      * 퇴출 이력 기록 클래스
@@ -205,5 +206,13 @@ public class User {
 
     public boolean hasExpulsionHistory() {
         return expulsionHistory != null && !expulsionHistory.isEmpty();
+    }
+
+    public int getThemePreference() {
+        return themePreference;
+    }
+
+    public void setThemePreference(int themePreference) {
+        this.themePreference = themePreference;
     }
 }

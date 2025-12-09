@@ -6,8 +6,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.ClubApplication;
 import com.example.clubmanagement.utils.FirebaseManager;
@@ -16,7 +15,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-public class ClubEstablishActivity extends AppCompatActivity {
+public class ClubEstablishActivity extends BaseActivity {
 
     private ImageView ivBack;
     private TextInputEditText etClubName;

@@ -14,9 +14,9 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.Club;
 import com.example.clubmanagement.utils.FirebaseManager;
@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.Locale;
 
-public class SuperAdminSettingsActivity extends AppCompatActivity {
+public class SuperAdminSettingsActivity extends BaseActivity {
 
     private ImageView ivBack;
     private ProgressBar progressBar;

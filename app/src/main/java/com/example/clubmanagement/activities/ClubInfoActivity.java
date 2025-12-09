@@ -11,9 +11,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.SettingsActivity;
 import com.example.clubmanagement.models.Club;
@@ -29,7 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class ClubInfoActivity extends AppCompatActivity {
+public class ClubInfoActivity extends BaseActivity {
 
     private FirebaseManager firebaseManager;
     private boolean isAdmin = false;

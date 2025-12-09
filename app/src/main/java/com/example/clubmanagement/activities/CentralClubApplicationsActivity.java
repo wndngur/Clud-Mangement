@@ -10,8 +10,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.CarouselItem;
 import com.example.clubmanagement.utils.FirebaseManager;
@@ -24,7 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class CentralClubApplicationsActivity extends AppCompatActivity {
+public class CentralClubApplicationsActivity extends BaseActivity {
 
     private LinearLayout llApplicationsContainer;
     private LinearLayout layoutEmpty;

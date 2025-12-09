@@ -12,10 +12,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.SettingsActivity;
 import com.example.clubmanagement.adapters.NoticeCommentAdapter;
@@ -27,7 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class NoticeDetailActivity extends AppCompatActivity implements NoticeCommentAdapter.OnCommentActionListener {
+public class NoticeDetailActivity extends BaseActivity implements NoticeCommentAdapter.OnCommentActionListener {
 
     private ImageView ivBack;
     private ImageView ivMore;

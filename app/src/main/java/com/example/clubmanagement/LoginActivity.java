@@ -10,10 +10,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.activities.ClubMainActivity;
 import com.example.clubmanagement.utils.FirebaseManager;
+import com.example.clubmanagement.utils.ThemeHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.textfield.TextInputEditText;
@@ -22,7 +22,7 @@ import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.List;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
 
     private static final String PREFS_NAME = "LoginPrefs";
     private static final String KEY_AUTO_LOGIN = "auto_login";
@@ -123,8 +123,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void goToMainActivity() {
-        // 가입한 동아리가 있는지 확인 후 해당 화면으로 이동
-        checkAndNavigateToJoinedClub();
+        // Firebase에서 테마 설정 동기화 후 화면 이동
+        ThemeHelper.syncThemeFromFirebase(this, () -> {
+            // 가입한 동아리가 있는지 확인 후 해당 화면으로 이동
+            checkAndNavigateToJoinedClub();
+        });
     }
 
     private void checkAndNavigateToJoinedClub() {

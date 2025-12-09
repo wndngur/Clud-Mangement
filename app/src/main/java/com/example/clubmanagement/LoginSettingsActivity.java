@@ -3,12 +3,12 @@ package com.example.clubmanagement;
 import android.content.Intent;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.example.clubmanagement.BaseActivity;
 import com.google.android.material.button.MaterialButton;
 
-public class LoginSettingsActivity extends AppCompatActivity {
+public class LoginSettingsActivity extends BaseActivity {
 
     private MaterialButton btnAdminLogin;
 

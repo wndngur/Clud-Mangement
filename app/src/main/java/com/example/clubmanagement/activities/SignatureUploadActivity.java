@@ -12,8 +12,8 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.example.clubmanagement.utils.SignatureUtil;
@@ -21,7 +21,7 @@ import com.google.android.material.button.MaterialButton;
 
 import java.io.IOException;
 
-public class SignatureUploadActivity extends AppCompatActivity {
+public class SignatureUploadActivity extends BaseActivity {
 
     private ImageView ivSignaturePreview;
     private TextView tvNoImage;

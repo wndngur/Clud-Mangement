@@ -374,52 +374,6 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Club Description Settings Card (Admin Only) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardDescriptionSettings"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:visibility="gone"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="동아리 설명"
-                        android:textSize="18sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="동아리 이름, 설명, 주요 활동 내용을 수정할 수 있습니다."
-                        android:textSize="14sp"
-                        android:textColor="@android:color/darker_gray"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <!-- Button to Edit Description -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnEditDescription"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="동아리 설명 수정"
-                        android:textSize="16sp"
-                        app:icon="@android:drawable/ic_menu_edit"
-                        app:iconGravity="start"/>
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
             <!-- Member Management Card (Admin Only) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardMemberManagement"

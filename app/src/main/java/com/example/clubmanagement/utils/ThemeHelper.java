@@ -8,6 +8,8 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.view.View;
 
+import com.google.firebase.firestore.FirebaseFirestore;
+
 /**
  * Helper class for managing app themes and color filters
  */
@@ -23,19 +25,78 @@ public class ThemeHelper {
     public static final int THEME_GRAYSCALE = 2;
 
     /**
-     * Save selected theme
+     * Save selected theme (로컬 + Firebase)
      */
     public static void setTheme(Context context, int theme) {
+        // 로컬에 저장
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         prefs.edit().putInt(KEY_THEME, theme).apply();
+
+        // 로그인된 사용자가 있으면 Firebase에도 저장
+        FirebaseManager firebaseManager = FirebaseManager.getInstance();
+        String userId = firebaseManager.getCurrentUserId();
+        if (userId != null) {
+            FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(userId)
+                    .update("themePreference", theme)
+                    .addOnFailureListener(e -> {
+                        android.util.Log.e("ThemeHelper", "Failed to save theme to Firebase: " + e.getMessage());
+                    });
+        }
     }
 
     /**
-     * Get current theme
+     * Get current theme (로컬에서 가져옴)
      */
     public static int getTheme(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         return prefs.getInt(KEY_THEME, THEME_ORIGINAL);
+    }
+
+    /**
+     * Firebase에서 테마 설정을 로드하여 로컬에 동기화 (로그인 시 호출)
+     */
+    public static void syncThemeFromFirebase(Context context, ThemeSyncCallback callback) {
+        FirebaseManager firebaseManager = FirebaseManager.getInstance();
+        String userId = firebaseManager.getCurrentUserId();
+
+        if (userId == null) {
+            if (callback != null) callback.onComplete();
+            return;
+        }
+
+        FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Long themePref = documentSnapshot.getLong("themePreference");
+                        if (themePref != null) {
+                            // Firebase에서 가져온 테마를 로컬에 저장
+                            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                            prefs.edit().putInt(KEY_THEME, themePref.intValue()).apply();
+                        }
+                    }
+                    if (callback != null) callback.onComplete();
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("ThemeHelper", "Failed to sync theme from Firebase: " + e.getMessage());
+                    if (callback != null) callback.onComplete();
+                });
+    }
+
+    /**
+     * 로그아웃 시 로컬 테마 설정 초기화
+     */
+    public static void clearLocalTheme(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putInt(KEY_THEME, THEME_ORIGINAL).apply();
+    }
+
+    public interface ThemeSyncCallback {
+        void onComplete();
     }
 
     /**

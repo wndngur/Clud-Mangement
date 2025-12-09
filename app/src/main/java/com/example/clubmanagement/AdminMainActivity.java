@@ -6,7 +6,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.clubmanagement.activities.ChatActivity;
@@ -23,7 +22,7 @@ import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AdminMainActivity extends AppCompatActivity {
+public class AdminMainActivity extends BaseActivity {
 
     private ViewPager2 viewPager;
     private CarouselAdapter carouselAdapter;

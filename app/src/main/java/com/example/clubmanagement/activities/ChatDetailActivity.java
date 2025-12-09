@@ -129,8 +129,8 @@ public class ChatDetailActivity extends BaseActivity {
         // 현재 열린 채팅방 설정 (알림 방지)
         getChatNotificationManager().setCurrentOpenChatRoom(chatRoomId);
 
-        // 이 채팅방의 읽지 않은 메시지 초기화
-        getChatNotificationManager().resetUnreadCount();
+        // 이 채팅방을 읽음으로 표시
+        getChatNotificationManager().markChatRoomAsRead(chatRoomId);
     }
 
     private void initViews() {
@@ -932,6 +932,15 @@ public class ChatDetailActivity extends BaseActivity {
             // 입력창 표시하고 정지 메시지 숨김
             inputLayout.setVisibility(View.VISIBLE);
             layoutMutedMessage.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // 채팅방을 나갈 때 읽음 처리 갱신
+        if (chatRoomId != null) {
+            getChatNotificationManager().markChatRoomAsRead(chatRoomId);
         }
     }
 

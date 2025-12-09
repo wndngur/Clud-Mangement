@@ -133,16 +133,73 @@
                     android:layout_marginBottom="24dp"
                     android:background="?attr/colorPrimary"/>
 
-                <!-- Description -->
-                <TextView
-                    android:id="@+id/tvDetailDescription"
+                <!-- 동아리 소개 섹션 -->
+                <LinearLayout
+                    android:id="@+id/llDescriptionSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📝 동아리 소개"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/tvDetailDescription"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="설명"
+                        android:textSize="15sp"
+                        android:lineHeight="26dp"
+                        android:textColor="@android:color/black"/>
+
+                </LinearLayout>
+
+                <!-- 주요 활동 섹션 -->
+                <LinearLayout
+                    android:id="@+id/llMainActivitiesSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎯 주요 활동"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/tvMainActivities"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="주요 활동"
+                        android:textSize="15sp"
+                        android:lineHeight="26dp"
+                        android:textColor="@android:color/black"/>
+
+                </LinearLayout>
+
+                <!-- View More Details Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnViewMoreDetails"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="설명"
-                    android:textSize="16sp"
-                    android:lineHeight="28dp"
-                    android:textColor="@android:color/black"
-                    android:layout_marginBottom="24dp"/>
+                    android:text="자세히 보기 ▼"
+                    android:textSize="14sp"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_marginBottom="16dp"/>
 
                 <!-- Club Info Section -->
                 <LinearLayout
@@ -392,6 +449,19 @@
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginTop="12dp"
+                    app:cornerRadius="28dp"/>
+
+                <!-- Go to My Club Button (내 동아리일 때만 표시) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGoToMyClub"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="내 동아리로 가기"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="12dp"
+                    android:backgroundTint="#4CAF50"
+                    android:visibility="gone"
                     app:cornerRadius="28dp"/>
 
                 <!-- Admin Manage Button (최고 관리자 모드에서만 표시) -->

@@ -10,8 +10,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.User;
 import com.example.clubmanagement.utils.FirebaseManager;
@@ -19,7 +18,7 @@ import com.google.android.material.button.MaterialButton;
 
 import java.util.List;
 
-public class MyClubsActivity extends AppCompatActivity {
+public class MyClubsActivity extends BaseActivity {
 
     private FirebaseManager firebaseManager;
     private ImageView ivBack;

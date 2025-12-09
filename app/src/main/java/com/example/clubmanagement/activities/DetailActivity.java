@@ -46,12 +46,19 @@ public class DetailActivity extends BaseActivity {
     private ImageView ivSuperAdminSettings;
     private TextView tvDetailTitle;
     private TextView tvDetailDescription;
+    private TextView tvMainActivities;
+    private LinearLayout llDescriptionSection;
+    private LinearLayout llMainActivitiesSection;
     private LinearLayout llFeatureList;
     private MaterialButton btnChatWithAdmin;
     private MaterialButton btnQnAFaq;
     private MaterialButton btnAction;
     private MaterialButton btnAdminManage;
+    private MaterialButton btnViewMoreDetails;
+    private MaterialButton btnGoToMyClub;
     private FloatingActionButton fabEdit;
+    private boolean isClubInfoExpanded = false;
+    private com.example.clubmanagement.models.Club loadedClub = null;
     private ProgressBar progressBar;
     private boolean isSuperAdminMode = false;
 
@@ -245,11 +252,16 @@ public class DetailActivity extends BaseActivity {
         ivSuperAdminSettings = findViewById(R.id.ivSuperAdminSettings);
         tvDetailTitle = findViewById(R.id.tvDetailTitle);
         tvDetailDescription = findViewById(R.id.tvDetailDescription);
+        tvMainActivities = findViewById(R.id.tvMainActivities);
+        llDescriptionSection = findViewById(R.id.llDescriptionSection);
+        llMainActivitiesSection = findViewById(R.id.llMainActivitiesSection);
         llFeatureList = findViewById(R.id.llFeatureList);
         btnChatWithAdmin = findViewById(R.id.btnChatWithAdmin);
         btnQnAFaq = findViewById(R.id.btnQnAFaq);
         btnAction = findViewById(R.id.btnAction);
         btnAdminManage = findViewById(R.id.btnAdminManage);
+        btnViewMoreDetails = findViewById(R.id.btnViewMoreDetails);
+        btnGoToMyClub = findViewById(R.id.btnGoToMyClub);
         fabEdit = findViewById(R.id.fabEdit);
         progressBar = findViewById(R.id.progressBar);
 
@@ -278,7 +290,12 @@ public class DetailActivity extends BaseActivity {
         fabEdit.setVisibility(View.GONE);
         ivSuperAdminSettings.setVisibility(View.GONE);
         btnAdminManage.setVisibility(View.GONE);
+        btnGoToMyClub.setVisibility(View.GONE);
         progressBar.setVisibility(View.GONE);
+
+        // Initially hide club info (shown when "자세히 보기" is clicked)
+        llClubInfo.setVisibility(View.GONE);
+        btnViewMoreDetails.setVisibility(View.GONE);
 
         // Setup default ViewPager2 adapter to prevent crash
         setupDefaultImages();
@@ -342,18 +359,86 @@ public class DetailActivity extends BaseActivity {
 
     private void loadCarouselData() {
         progressBar.setVisibility(View.VISIBLE);
+        android.util.Log.d("DetailActivity", "loadCarouselData - pageIndex: " + pageIndex);
 
+        // Intent에서 직접 전달받은 club_id가 있으면 사용
+        String intentClubId = getIntent().getStringExtra("club_id");
+        String intentClubName = getIntent().getStringExtra("club_name");
+        android.util.Log.d("DetailActivity", "Intent club_id: " + intentClubId + ", club_name: " + intentClubName);
+
+        // clubId가 있으면 clubId로 캐러셀 아이템 검색
+        if (intentClubId != null && !intentClubId.isEmpty()) {
+            loadCarouselDataByClubId(intentClubId, intentClubName);
+        } else {
+            // clubId가 없으면 position으로 검색 (기존 로직)
+            loadCarouselDataByPosition(intentClubId, intentClubName);
+        }
+    }
+
+    private void loadCarouselDataByClubId(String clubId, String clubName) {
+        android.util.Log.d("DetailActivity", "loadCarouselDataByClubId - clubId: " + clubId);
+
+        firebaseManager.getDb().collection("carousel_items")
+                .whereEqualTo("clubId", clubId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    progressBar.setVisibility(View.GONE);
+
+                    if (!querySnapshot.isEmpty()) {
+                        com.google.firebase.firestore.DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                        CarouselItem item = doc.toObject(CarouselItem.class);
+                        if (item != null) {
+                            item.setId(doc.getId());
+                            android.util.Log.d("DetailActivity", "Found CarouselItem by clubId - title: " + item.getTitle() + ", description: " + item.getDescription());
+                            currentItem = item;
+                            displayCarouselItem(item);
+                        } else {
+                            // 파싱 실패 시 기본 아이템 생성
+                            createDefaultCarouselItem(clubId, clubName);
+                        }
+                    } else {
+                        // clubId로 못 찾음 - 기본 아이템 생성
+                        android.util.Log.d("DetailActivity", "No CarouselItem found by clubId, creating default");
+                        createDefaultCarouselItem(clubId, clubName);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("DetailActivity", "Failed to load CarouselItem by clubId", e);
+                    progressBar.setVisibility(View.GONE);
+                    createDefaultCarouselItem(clubId, clubName);
+                });
+    }
+
+    private void createDefaultCarouselItem(String clubId, String clubName) {
+        CarouselItem newItem = new CarouselItem();
+        newItem.setClubId(clubId);
+        newItem.setClubName(clubName != null ? clubName : "동아리");
+        newItem.setTitle(clubName != null ? clubName : "동아리");
+        newItem.setPosition(pageIndex);
+        currentItem = newItem;
+        displayCarouselItem(newItem);
+    }
+
+    private void loadCarouselDataByPosition(String intentClubId, String intentClubName) {
         firebaseManager.getCarouselItemByPosition(pageIndex, new FirebaseManager.CarouselCallback() {
             @Override
             public void onSuccess(CarouselItem item) {
                 progressBar.setVisibility(View.GONE);
-                currentItem = item;
+                android.util.Log.d("DetailActivity", "getCarouselItemByPosition onSuccess - item: " + (item != null ? "not null" : "null"));
 
                 if (item != null) {
+                    android.util.Log.d("DetailActivity", "CarouselItem - title: " + item.getTitle() + ", clubId: " + item.getClubId() + ", clubName: " + item.getClubName());
+                    currentItem = item;
                     // Load from Firebase
                     displayCarouselItem(item);
+                } else if (intentClubId != null && !intentClubId.isEmpty()) {
+                    // carousel_items에서 못 찾았지만 Intent에서 clubId를 받은 경우
+                    android.util.Log.d("DetailActivity", "Creating CarouselItem from Intent data");
+                    createDefaultCarouselItem(intentClubId, intentClubName);
                 } else {
                     // Load default content
+                    android.util.Log.d("DetailActivity", "No item found, showing default content");
                     setupDefaultContent();
                 }
             }
@@ -361,8 +446,16 @@ public class DetailActivity extends BaseActivity {
             @Override
             public void onFailure(Exception e) {
                 progressBar.setVisibility(View.GONE);
-                Toast.makeText(DetailActivity.this, "데이터 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                setupDefaultContent();
+                android.util.Log.e("DetailActivity", "getCarouselItemByPosition onFailure", e);
+
+                // 실패해도 Intent에서 clubId를 받은 경우 시도
+                if (intentClubId != null && !intentClubId.isEmpty()) {
+                    android.util.Log.d("DetailActivity", "Failed but creating CarouselItem from Intent data");
+                    createDefaultCarouselItem(intentClubId, intentClubName);
+                } else {
+                    Toast.makeText(DetailActivity.this, "데이터 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    setupDefaultContent();
+                }
             }
         });
     }
@@ -371,8 +464,23 @@ public class DetailActivity extends BaseActivity {
         // Set title
         tvDetailTitle.setText(item.getTitle());
 
-        // Set description
-        tvDetailDescription.setText(item.getDescription());
+        // Set description in separate section
+        String description = item.getDescription();
+        if (description != null && !description.isEmpty()) {
+            tvDetailDescription.setText(description);
+            llDescriptionSection.setVisibility(View.VISIBLE);
+        } else {
+            llDescriptionSection.setVisibility(View.GONE);
+        }
+
+        // Set main activities in separate section
+        String mainActivities = item.getMainActivities();
+        if (mainActivities != null && !mainActivities.isEmpty()) {
+            tvMainActivities.setText(mainActivities);
+            llMainActivitiesSection.setVisibility(View.VISIBLE);
+        } else {
+            llMainActivitiesSection.setVisibility(View.GONE);
+        }
 
         // Load images from CarouselItem
         loadCarouselImages(item);
@@ -381,11 +489,115 @@ public class DetailActivity extends BaseActivity {
         String clubId = item.getClubId();
         android.util.Log.d("DetailActivity", "displayCarouselItem - clubId: " + clubId);
 
-        // 동아리 정보 로드 및 표시
-        loadAndDisplayClubInfo(clubId);
+        // clubId가 없으면 clubName으로 동아리를 찾아서 clubId 설정
+        if ((clubId == null || clubId.isEmpty()) && item.getClubName() != null && !item.getClubName().isEmpty()) {
+            findClubByNameAndDisplay(item);
+        } else if ((clubId == null || clubId.isEmpty()) && item.getTitle() != null && !item.getTitle().isEmpty()) {
+            // clubName도 없으면 title로 시도
+            findClubByTitleAndDisplay(item);
+        } else {
+            // 동아리 정보 로드 및 표시
+            loadAndDisplayClubInfo(clubId);
 
-        // 사용자의 중앙동아리 가입 상태에 따라 버튼 설정
-        updateButtonForCentralClub(clubId);
+            // 사용자의 중앙동아리 가입 상태에 따라 버튼 설정
+            updateButtonForCentralClub(clubId);
+        }
+    }
+
+    private void findClubByNameAndDisplay(CarouselItem item) {
+        String searchName = item.getClubName();
+        android.util.Log.d("DetailActivity", "Searching club by name: " + searchName);
+
+        firebaseManager.getDb().collection("clubs")
+                .whereEqualTo("name", searchName)
+                .whereEqualTo("centralClub", true)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        com.google.firebase.firestore.DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                        String foundClubId = doc.getId();
+                        android.util.Log.d("DetailActivity", "Found club by name: " + foundClubId);
+
+                        // currentItem에 clubId 설정
+                        item.setClubId(foundClubId);
+                        currentItem = item;
+
+                        // carousel_items 문서도 업데이트
+                        updateCarouselItemClubId(item.getId(), foundClubId);
+
+                        // 동아리 정보 로드 및 표시
+                        loadAndDisplayClubInfo(foundClubId);
+                        updateButtonForCentralClub(foundClubId);
+                    } else {
+                        android.util.Log.d("DetailActivity", "Club not found by name: " + searchName);
+                        llClubInfo.setVisibility(View.GONE);
+                        updateButtonForCentralClub(null);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("DetailActivity", "Error finding club by name", e);
+                    llClubInfo.setVisibility(View.GONE);
+                    updateButtonForCentralClub(null);
+                });
+    }
+
+    private void findClubByTitleAndDisplay(CarouselItem item) {
+        String searchTitle = item.getTitle();
+        android.util.Log.d("DetailActivity", "Searching club by title: " + searchTitle);
+
+        firebaseManager.getDb().collection("clubs")
+                .whereEqualTo("name", searchTitle)
+                .whereEqualTo("centralClub", true)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        com.google.firebase.firestore.DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                        String foundClubId = doc.getId();
+                        android.util.Log.d("DetailActivity", "Found club by title: " + foundClubId);
+
+                        // currentItem에 clubId 설정
+                        item.setClubId(foundClubId);
+                        item.setClubName(searchTitle);
+                        currentItem = item;
+
+                        // carousel_items 문서도 업데이트
+                        updateCarouselItemClubId(item.getId(), foundClubId);
+
+                        // 동아리 정보 로드 및 표시
+                        loadAndDisplayClubInfo(foundClubId);
+                        updateButtonForCentralClub(foundClubId);
+                    } else {
+                        android.util.Log.d("DetailActivity", "Club not found by title: " + searchTitle);
+                        llClubInfo.setVisibility(View.GONE);
+                        updateButtonForCentralClub(null);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("DetailActivity", "Error finding club by title", e);
+                    llClubInfo.setVisibility(View.GONE);
+                    updateButtonForCentralClub(null);
+                });
+    }
+
+    private void updateCarouselItemClubId(String carouselItemId, String clubId) {
+        if (carouselItemId == null || carouselItemId.isEmpty()) {
+            return;
+        }
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("clubId", clubId);
+
+        firebaseManager.getDb().collection("carousel_items")
+                .document(carouselItemId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    android.util.Log.d("DetailActivity", "Updated carousel item clubId: " + clubId);
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("DetailActivity", "Failed to update carousel item clubId", e);
+                });
     }
 
     private void loadCarouselImages(CarouselItem item) {
@@ -453,6 +665,7 @@ public class DetailActivity extends BaseActivity {
 
     private void loadAndDisplayClubInfo(String clubId) {
         if (clubId == null || clubId.isEmpty()) {
+            btnViewMoreDetails.setVisibility(View.GONE);
             llClubInfo.setVisibility(View.GONE);
             return;
         }
@@ -461,17 +674,55 @@ public class DetailActivity extends BaseActivity {
             @Override
             public void onSuccess(com.example.clubmanagement.models.Club club) {
                 if (club != null) {
-                    displayClubInfoSection(club);
+                    loadedClub = club;
+                    // 정보가 있으면 "자세히 보기" 버튼 표시
+                    if (hasClubInfo(club)) {
+                        btnViewMoreDetails.setVisibility(View.VISIBLE);
+                    } else {
+                        btnViewMoreDetails.setVisibility(View.GONE);
+                    }
+                    // 처음에는 상세 정보 숨김
+                    llClubInfo.setVisibility(View.GONE);
                 } else {
+                    btnViewMoreDetails.setVisibility(View.GONE);
                     llClubInfo.setVisibility(View.GONE);
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
+                btnViewMoreDetails.setVisibility(View.GONE);
                 llClubInfo.setVisibility(View.GONE);
             }
         });
+    }
+
+    private boolean hasClubInfo(com.example.clubmanagement.models.Club club) {
+        return (club.getProfessor() != null && !club.getProfessor().isEmpty()) ||
+               (club.getDepartment() != null && !club.getDepartment().isEmpty()) ||
+               (club.getLocation() != null && !club.getLocation().isEmpty()) ||
+               club.getFoundedAt() != null ||
+               club.getMemberCount() > 0 ||
+               (club.getPurpose() != null && !club.getPurpose().isEmpty()) ||
+               (club.getMonthlyScheduleAsString() != null && !club.getMonthlyScheduleAsString().isEmpty()) ||
+               (club.getSchedule() != null && !club.getSchedule().isEmpty());
+    }
+
+    private void toggleClubInfoVisibility() {
+        if (loadedClub == null) {
+            return;
+        }
+
+        isClubInfoExpanded = !isClubInfoExpanded;
+
+        if (isClubInfoExpanded) {
+            displayClubInfoSection(loadedClub);
+            llClubInfo.setVisibility(View.VISIBLE);
+            btnViewMoreDetails.setText("접기 ▲");
+        } else {
+            llClubInfo.setVisibility(View.GONE);
+            btnViewMoreDetails.setText("자세히 보기 ▼");
+        }
     }
 
     private void displayClubInfoSection(com.example.clubmanagement.models.Club club) {
@@ -579,8 +830,8 @@ public class DetailActivity extends BaseActivity {
         // 이미 이 동아리(중앙동아리)에 가입되어 있는 경우 - "내 동아리로 가기"
         if (userCentralClubId != null && !userCentralClubId.isEmpty() && userCentralClubId.equals(clubId)) {
             isMyClub = true;
-            btnAction.setText("내 동아리로 가기");
-            btnAction.setVisibility(View.VISIBLE);
+            btnAction.setVisibility(View.GONE);
+            btnGoToMyClub.setVisibility(View.VISIBLE);
             android.util.Log.d("DetailActivity", "Already member of this club, showing 내 동아리로 가기");
             return;
         }
@@ -641,14 +892,19 @@ public class DetailActivity extends BaseActivity {
                         // 이 동아리의 멤버임 - "내 동아리로 가기"
                         isMyClub = true;
                         userCentralClubId = clubId;
-                        btnAction.setText("내 동아리로 가기");
-                        btnAction.setVisibility(View.VISIBLE);
+                        String memberClubName = memberDoc.getString("clubName");
+                        if (memberClubName != null) {
+                            userCentralClubName = memberClubName;
+                        }
+                        btnAction.setVisibility(View.GONE);
+                        btnGoToMyClub.setVisibility(View.VISIBLE);
                         android.util.Log.d("DetailActivity", "Member found, showing 내 동아리로 가기");
                     } else {
                         // 멤버 아님 - 가입 신청 버튼
                         isMyClub = false;
                         btnAction.setText("가입 신청하기");
                         btnAction.setVisibility(View.VISIBLE);
+                        btnGoToMyClub.setVisibility(View.GONE);
                         android.util.Log.d("DetailActivity", "Not a member, showing 가입 신청하기");
                     }
                 })
@@ -657,6 +913,7 @@ public class DetailActivity extends BaseActivity {
                     isMyClub = false;
                     btnAction.setText("가입 신청하기");
                     btnAction.setVisibility(View.VISIBLE);
+                    btnGoToMyClub.setVisibility(View.GONE);
                     android.util.Log.e("DetailActivity", "Member check failed: " + e.getMessage());
                 });
     }
@@ -667,8 +924,9 @@ public class DetailActivity extends BaseActivity {
         if (clubNameToSet != null) {
             userCentralClubName = clubNameToSet;
         }
-        btnAction.setText("내 동아리로 가기");
-        btnAction.setVisibility(View.VISIBLE);
+        // 가입 신청 버튼 숨기고 내 동아리로 가기 버튼 표시
+        btnAction.setVisibility(View.GONE);
+        btnGoToMyClub.setVisibility(View.VISIBLE);
     }
 
     private void checkIfClubIsCentralAndSetButton(String clubId) {
@@ -828,6 +1086,8 @@ public class DetailActivity extends BaseActivity {
     private void showEmptyState() {
         tvDetailTitle.setText("동아리 정보 없음");
         tvDetailDescription.setText("해당 동아리 정보를 찾을 수 없습니다.");
+        llDescriptionSection.setVisibility(View.GONE);
+        llMainActivitiesSection.setVisibility(View.GONE);
         llFeatureList.removeAllViews();
 
         // 최고 관리자 모드면 버튼 숨김
@@ -876,6 +1136,30 @@ public class DetailActivity extends BaseActivity {
             openSuperAdminSettings();
         });
 
+        // 자세히 보기 버튼
+        btnViewMoreDetails.setOnClickListener(v -> {
+            toggleClubInfoVisibility();
+        });
+
+        // 내 동아리로 가기 버튼
+        btnGoToMyClub.setOnClickListener(v -> {
+            if (userCentralClubId != null) {
+                Intent intent = new Intent(DetailActivity.this, ClubMainActivity.class);
+                intent.putExtra("club_id", userCentralClubId);
+                intent.putExtra("club_name", userCentralClubName);
+                intent.putExtra("isCentralClub", true);
+                startActivity(intent);
+                finish();
+            } else if (currentItem != null && currentItem.getClubId() != null) {
+                Intent intent = new Intent(DetailActivity.this, ClubMainActivity.class);
+                intent.putExtra("club_id", currentItem.getClubId());
+                intent.putExtra("club_name", currentItem.getClubName() != null ? currentItem.getClubName() : currentItem.getTitle());
+                intent.putExtra("isCentralClub", true);
+                startActivity(intent);
+                finish();
+            }
+        });
+
         // 관리자와 대화하기 버튼
         btnChatWithAdmin.setOnClickListener(v -> {
             startChatWithAdmin();
@@ -919,19 +1203,8 @@ public class DetailActivity extends BaseActivity {
             startActivity(intent);
         });
 
-        // 액션 버튼 - 내 동아리로 가기 또는 회원가입 화면으로 이동
+        // 액션 버튼 - 가입 신청 버튼
         btnAction.setOnClickListener(v -> {
-            // 내 동아리로 가기 버튼인 경우
-            if (isMyClub && userCentralClubId != null) {
-                Intent intent = new Intent(DetailActivity.this, ClubMainActivity.class);
-                intent.putExtra("club_id", userCentralClubId);
-                intent.putExtra("club_name", userCentralClubName);
-                intent.putExtra("isCentralClub", true);
-                startActivity(intent);
-                finish();
-                return;
-            }
-
             if (fromClubList) {
                 // 일반 동아리 - 회원가입 화면으로 이동하여 정보 입력
                 String clubId = getIntent().getStringExtra("club_id");

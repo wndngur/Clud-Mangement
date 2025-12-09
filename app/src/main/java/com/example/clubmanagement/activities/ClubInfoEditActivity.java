@@ -6,15 +6,18 @@ import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
+import com.example.clubmanagement.models.CarouselItem;
 import com.example.clubmanagement.models.Club;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
@@ -22,21 +25,30 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ClubInfoEditActivity extends AppCompatActivity {
+public class ClubInfoEditActivity extends BaseActivity {
 
     private FirebaseManager firebaseManager;
     private Club currentClub;
+    private CarouselItem currentCarouselItem;
     private String clubId;
     private String clubName;
+    private int currentTab = 0; // 0: 동아리 정보, 1: 동아리 설명
 
     // UI Components
     private Toolbar toolbar;
+    private TabLayout tabLayout;
+    private ScrollView scrollViewInfo;
+    private ScrollView scrollViewDescription;
     private TextInputEditText etPurpose;
     private TextInputEditText etProfessor;
     private TextInputEditText etDepartment;
     private TextInputEditText etLocation;
     private MaterialButton btnSave;
     private ProgressBar progressBar;
+
+    // Description tab UI
+    private TextInputEditText etClubDescription;
+    private TextInputEditText etMainActivities;
 
     // Monthly schedule EditTexts
     private TextInputEditText[] etMonths = new TextInputEditText[13]; // Index 1-12 for months
@@ -78,12 +90,19 @@ public class ClubInfoEditActivity extends AppCompatActivity {
 
     private void initViews() {
         toolbar = findViewById(R.id.toolbar);
+        tabLayout = findViewById(R.id.tabLayout);
+        scrollViewInfo = findViewById(R.id.scrollViewInfo);
+        scrollViewDescription = findViewById(R.id.scrollViewDescription);
         etPurpose = findViewById(R.id.etPurpose);
         etProfessor = findViewById(R.id.etProfessor);
         etDepartment = findViewById(R.id.etDepartment);
         etLocation = findViewById(R.id.etLocation);
         btnSave = findViewById(R.id.btnSave);
         progressBar = findViewById(R.id.progressBar);
+
+        // Description tab views
+        etClubDescription = findViewById(R.id.etClubDescription);
+        etMainActivities = findViewById(R.id.etMainActivities);
 
         // Monthly schedule EditTexts
         etMonths[1] = findViewById(R.id.etMonth1);
@@ -124,11 +143,10 @@ public class ClubInfoEditActivity extends AppCompatActivity {
     private void loadClubInfo() {
         progressBar.setVisibility(View.VISIBLE);
 
+        // 동아리 정보 로드
         firebaseManager.getClub(clubId, new FirebaseManager.ClubCallback() {
             @Override
             public void onSuccess(Club club) {
-                progressBar.setVisibility(View.GONE);
-
                 if (club != null) {
                     currentClub = club;
                     displayClubInfo();
@@ -137,6 +155,8 @@ public class ClubInfoEditActivity extends AppCompatActivity {
                     currentClub = new Club(clubId, clubName != null ? clubName : "동아리");
                     displayClubInfo();
                 }
+                // 캐러셀 아이템(동아리 설명) 로드
+                loadCarouselItem();
             }
 
             @Override
@@ -145,6 +165,53 @@ public class ClubInfoEditActivity extends AppCompatActivity {
                 Toast.makeText(ClubInfoEditActivity.this, "동아리 정보 로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void loadCarouselItem() {
+        firebaseManager.getDb().collection("carousel_items")
+                .whereEqualTo("clubId", clubId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    progressBar.setVisibility(View.GONE);
+
+                    if (!querySnapshot.isEmpty()) {
+                        com.google.firebase.firestore.DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                        currentCarouselItem = doc.toObject(CarouselItem.class);
+                        if (currentCarouselItem != null) {
+                            currentCarouselItem.setId(doc.getId());
+                            displayCarouselInfo();
+                        }
+                    } else {
+                        // 캐러셀 아이템이 없으면 새로 생성
+                        currentCarouselItem = new CarouselItem();
+                        currentCarouselItem.setClubId(clubId);
+                        currentCarouselItem.setClubName(clubName != null ? clubName : "동아리");
+                        currentCarouselItem.setTitle(clubName != null ? clubName : "동아리");
+                        displayCarouselInfo();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    progressBar.setVisibility(View.GONE);
+                    // 실패해도 기본 아이템 생성
+                    currentCarouselItem = new CarouselItem();
+                    currentCarouselItem.setClubId(clubId);
+                    currentCarouselItem.setClubName(clubName != null ? clubName : "동아리");
+                    currentCarouselItem.setTitle(clubName != null ? clubName : "동아리");
+                    displayCarouselInfo();
+                });
+    }
+
+    private void displayCarouselInfo() {
+        if (currentCarouselItem == null) return;
+
+        if (currentCarouselItem.getDescription() != null) {
+            etClubDescription.setText(currentCarouselItem.getDescription());
+        }
+
+        if (currentCarouselItem.getMainActivities() != null) {
+            etMainActivities.setText(currentCarouselItem.getMainActivities());
+        }
     }
 
     private void displayClubInfo() {
@@ -200,7 +267,22 @@ public class ClubInfoEditActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnSave.setOnClickListener(v -> saveClubInfo());
+        btnSave.setOnClickListener(v -> saveAllInfo());
+
+        // 탭 전환 리스너
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                currentTab = tab.getPosition();
+                updateTabVisibility();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
 
         // 활동 유형 - 최대 2개 선택 제한
         CheckBox[] activityCheckboxes = {cbVolunteer, cbSports, cbOutdoor};
@@ -225,6 +307,89 @@ public class ClubInfoEditActivity extends AppCompatActivity {
         }
     }
 
+    private void updateTabVisibility() {
+        if (currentTab == 0) {
+            scrollViewInfo.setVisibility(View.VISIBLE);
+            scrollViewDescription.setVisibility(View.GONE);
+        } else {
+            scrollViewInfo.setVisibility(View.GONE);
+            scrollViewDescription.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void saveAllInfo() {
+        progressBar.setVisibility(View.VISIBLE);
+        btnSave.setEnabled(false);
+
+        // 동아리 정보 저장
+        saveClubInfo(() -> {
+            // 동아리 설명 저장
+            saveCarouselItem(() -> {
+                progressBar.setVisibility(View.GONE);
+                btnSave.setEnabled(true);
+                Toast.makeText(ClubInfoEditActivity.this, "저장 완료", Toast.LENGTH_SHORT).show();
+                finish();
+            });
+        });
+    }
+
+    private interface SaveCallback {
+        void onComplete();
+    }
+
+    private void saveCarouselItem(SaveCallback callback) {
+        String description = etClubDescription.getText() != null ? etClubDescription.getText().toString().trim() : "";
+        String mainActivities = etMainActivities.getText() != null ? etMainActivities.getText().toString().trim() : "";
+
+        if (currentCarouselItem == null) {
+            currentCarouselItem = new CarouselItem();
+            currentCarouselItem.setClubId(clubId);
+        }
+
+        // 동아리 이름은 기존 값 유지 또는 clubName 사용
+        if (currentCarouselItem.getTitle() == null || currentCarouselItem.getTitle().isEmpty()) {
+            currentCarouselItem.setTitle(clubName);
+        }
+        if (currentCarouselItem.getClubName() == null || currentCarouselItem.getClubName().isEmpty()) {
+            currentCarouselItem.setClubName(clubName);
+        }
+        currentCarouselItem.setDescription(description);
+        currentCarouselItem.setMainActivities(mainActivities);
+
+        Map<String, Object> carouselData = new HashMap<>();
+        carouselData.put("clubId", clubId);
+        carouselData.put("clubName", currentCarouselItem.getClubName());
+        carouselData.put("title", currentCarouselItem.getTitle());
+        carouselData.put("description", currentCarouselItem.getDescription());
+        carouselData.put("mainActivities", currentCarouselItem.getMainActivities());
+        carouselData.put("position", currentCarouselItem.getPosition());
+        carouselData.put("updatedAt", com.google.firebase.Timestamp.now());
+
+        if (currentCarouselItem.getId() != null && !currentCarouselItem.getId().isEmpty()) {
+            // 기존 문서 업데이트
+            firebaseManager.getDb().collection("carousel_items")
+                    .document(currentCarouselItem.getId())
+                    .update(carouselData)
+                    .addOnSuccessListener(aVoid -> callback.onComplete())
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "동아리 설명 저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        callback.onComplete();
+                    });
+        } else {
+            // 새 문서 생성
+            firebaseManager.getDb().collection("carousel_items")
+                    .add(carouselData)
+                    .addOnSuccessListener(docRef -> {
+                        currentCarouselItem.setId(docRef.getId());
+                        callback.onComplete();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "동아리 설명 저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        callback.onComplete();
+                    });
+        }
+    }
+
     private int countChecked(CheckBox[] checkboxes) {
         int count = 0;
         for (CheckBox cb : checkboxes) {
@@ -233,7 +398,7 @@ public class ClubInfoEditActivity extends AppCompatActivity {
         return count;
     }
 
-    private void saveClubInfo() {
+    private void saveClubInfo(SaveCallback callback) {
         // Get values from EditText fields
         String purpose = etPurpose.getText() != null ? etPurpose.getText().toString().trim() : "";
         String professor = etProfessor.getText() != null ? etProfessor.getText().toString().trim() : "";
@@ -292,23 +457,16 @@ public class ClubInfoEditActivity extends AppCompatActivity {
         currentClub.setPurposes(purposes);
 
         // Save to Firebase
-        progressBar.setVisibility(View.VISIBLE);
-        btnSave.setEnabled(false);
-
         firebaseManager.saveClub(currentClub, new FirebaseManager.ClubCallback() {
             @Override
             public void onSuccess(Club club) {
-                progressBar.setVisibility(View.GONE);
-                btnSave.setEnabled(true);
-                Toast.makeText(ClubInfoEditActivity.this, "저장 완료", Toast.LENGTH_SHORT).show();
-                finish();
+                callback.onComplete();
             }
 
             @Override
             public void onFailure(Exception e) {
-                progressBar.setVisibility(View.GONE);
-                btnSave.setEnabled(true);
-                Toast.makeText(ClubInfoEditActivity.this, "저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(ClubInfoEditActivity.this, "동아리 정보 저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                callback.onComplete();
             }
         });
     }

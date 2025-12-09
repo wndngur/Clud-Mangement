@@ -12,11 +12,11 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.adapters.MemberAdapter;
 import com.example.clubmanagement.adapters.WithdrawalRequestAdapter;
@@ -28,7 +28,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MemberManagementActivity extends AppCompatActivity {
+public class MemberManagementActivity extends BaseActivity {
 
     private FirebaseManager firebaseManager;
     private String clubId;

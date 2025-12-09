@@ -6,15 +6,14 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.example.clubmanagement.utils.SignatureUtil;
 import com.example.clubmanagement.views.SignaturePadView;
 import com.google.android.material.button.MaterialButton;
 
-public class SignaturePadActivity extends AppCompatActivity {
+public class SignaturePadActivity extends BaseActivity {
 
     private SignaturePadView signaturePadView;
     private MaterialButton btnClear;

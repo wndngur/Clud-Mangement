@@ -4,8 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.activities.DocumentGenerateActivity;
 import com.example.clubmanagement.activities.SignaturePadActivity;
 import com.example.clubmanagement.activities.SignatureUploadActivity;
@@ -14,7 +13,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
 
     private FirebaseManager firebaseManager;
 

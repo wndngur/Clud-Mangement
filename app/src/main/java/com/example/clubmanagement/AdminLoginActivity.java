@@ -9,14 +9,14 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
+import com.example.clubmanagement.utils.ThemeHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 
-public class AdminLoginActivity extends AppCompatActivity {
+public class AdminLoginActivity extends BaseActivity {
 
     private ImageButton btnBack;
     private TextInputLayout tilEmail, tilPassword;
@@ -123,11 +123,13 @@ public class AdminLoginActivity extends AppCompatActivity {
                         SettingsActivity.setSuperAdminModeStatic(this, true);
 
                         Toast.makeText(this, "관리자 로그인 성공", Toast.LENGTH_SHORT).show();
-                        // 관리자 메인 화면으로 이동
-                        Intent intent = new Intent(this, AdminMainActivity.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(intent);
-                        finish();
+                        // Firebase에서 테마 동기화 후 관리자 메인 화면으로 이동
+                        ThemeHelper.syncThemeFromFirebase(this, () -> {
+                            Intent intent = new Intent(this, AdminMainActivity.class);
+                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            startActivity(intent);
+                            finish();
+                        });
                     } else {
                         String errorMessage = "로그인에 실패했습니다";
                         if (task.getException() != null) {

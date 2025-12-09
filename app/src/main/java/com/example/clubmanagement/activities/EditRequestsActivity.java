@@ -10,9 +10,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.EditRequest;
 import com.example.clubmanagement.utils.FirebaseManager;
@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
 
-public class EditRequestsActivity extends AppCompatActivity {
+public class EditRequestsActivity extends BaseActivity {
 
     private LinearLayout llRequestsContainer;
     private LinearLayout layoutEmpty;

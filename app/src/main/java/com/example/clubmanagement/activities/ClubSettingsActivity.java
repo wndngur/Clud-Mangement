@@ -22,8 +22,9 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
+import com.example.clubmanagement.BaseActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -51,7 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class ClubSettingsActivity extends AppCompatActivity {
+public class ClubSettingsActivity extends BaseActivity {
 
     public static final String PREFS_NAME = "ClubAdminPrefs";
     public static final String KEY_CLUB_ADMIN_MODE = "club_admin_mode_active";
@@ -59,14 +60,12 @@ public class ClubSettingsActivity extends AppCompatActivity {
     private FirebaseManager firebaseManager;
     private MaterialButton btnClubAdmin;
     private MaterialButton btnLogoutAdmin;
-    private MaterialButton btnEditDescription;
     private MaterialButton btnMemberManagement;
     private MaterialButton btnEditClubInfo;
     private TextView tvAdminStatus;
     private TextView tvClubName;
     private ProgressBar progressBar;
     private MaterialCardView cardPosterSettings;
-    private MaterialCardView cardDescriptionSettings;
     private MaterialCardView cardMemberManagement;
     private MaterialCardView cardClubInfoEdit;
     private MaterialCardView cardEditRequests;
@@ -153,14 +152,12 @@ public class ClubSettingsActivity extends AppCompatActivity {
     private void initViews() {
         btnClubAdmin = findViewById(R.id.btnClubAdmin);
         btnLogoutAdmin = findViewById(R.id.btnLogoutAdmin);
-        btnEditDescription = findViewById(R.id.btnEditDescription);
         btnMemberManagement = findViewById(R.id.btnMemberManagement);
         btnEditClubInfo = findViewById(R.id.btnEditClubInfo);
         tvAdminStatus = findViewById(R.id.tvAdminStatus);
         tvClubName = findViewById(R.id.tvClubName);
         progressBar = findViewById(R.id.progressBarSettings);
         cardPosterSettings = findViewById(R.id.cardPosterSettings);
-        cardDescriptionSettings = findViewById(R.id.cardDescriptionSettings);
         cardMemberManagement = findViewById(R.id.cardMemberManagement);
         cardClubInfoEdit = findViewById(R.id.cardClubInfoEdit);
         cardEditRequests = findViewById(R.id.cardEditRequests);
@@ -207,7 +204,6 @@ public class ClubSettingsActivity extends AppCompatActivity {
     private void setupListeners() {
         btnClubAdmin.setOnClickListener(v -> toggleClubAdminMode());
         btnLogoutAdmin.setOnClickListener(v -> logoutAdmin());
-        btnEditDescription.setOnClickListener(v -> openDescriptionEdit());
         btnMemberManagement.setOnClickListener(v -> openMemberManagement());
         btnEditClubInfo.setOnClickListener(v -> openClubInfoEdit());
         btnViewEditRequests.setOnClickListener(v -> openEditRequests());
@@ -618,13 +614,6 @@ public class ClubSettingsActivity extends AppCompatActivity {
         }
     }
 
-    private void openDescriptionEdit() {
-        Intent intent = new Intent(ClubSettingsActivity.this, ClubDescriptionEditActivity.class);
-        intent.putExtra("club_id", clubId);
-        intent.putExtra("club_name", clubName);
-        startActivity(intent);
-    }
-
     private void openMemberManagement() {
         Intent intent = new Intent(ClubSettingsActivity.this, MemberManagementActivity.class);
         intent.putExtra("club_id", clubId);
@@ -777,10 +766,9 @@ public class ClubSettingsActivity extends AppCompatActivity {
             cardClubInfoEdit.setVisibility(View.VISIBLE);
             cardQnAManagement.setVisibility(View.VISIBLE);
 
-            // 포스터/설명 편집은 중앙동아리만 가능하므로 일단 숨김 처리
+            // 포스터 편집은 중앙동아리만 가능하므로 일단 숨김 처리
             // loadClubAndApplicationStatus에서 중앙동아리 여부 확인 후 표시
             cardPosterSettings.setVisibility(View.GONE);
-            cardDescriptionSettings.setVisibility(View.GONE);
 
             // 수정 요청 카드 표시 및 읽지 않은 개수 로드
             cardEditRequests.setVisibility(View.VISIBLE);
@@ -806,7 +794,6 @@ public class ClubSettingsActivity extends AppCompatActivity {
 
             // 일반 사용자일 때 관리 카드뷰들 숨기기
             cardPosterSettings.setVisibility(View.GONE);
-            cardDescriptionSettings.setVisibility(View.GONE);
             cardMemberManagement.setVisibility(View.GONE);
             cardClubInfoEdit.setVisibility(View.GONE);
             cardEditRequests.setVisibility(View.GONE);
@@ -854,10 +841,9 @@ public class ClubSettingsActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Club club) {
                 currentClub = club;
-                // 중앙동아리인 경우에만 포스터/설명 카드 표시
+                // 중앙동아리인 경우에만 포스터 카드 표시
                 if (club != null && club.isCentralClub()) {
                     cardPosterSettings.setVisibility(View.VISIBLE);
-                    cardDescriptionSettings.setVisibility(View.VISIBLE);
                     loadPosterImages();
                 }
             }
@@ -877,16 +863,14 @@ public class ClubSettingsActivity extends AppCompatActivity {
             btnApplyCentral.setText("이미 중앙동아리");
             tvApplicationStatus.setVisibility(View.GONE);
 
-            // 중앙동아리인 경우 포스터/설명 편집 카드 표시
+            // 중앙동아리인 경우 포스터 편집 카드 표시
             cardPosterSettings.setVisibility(View.VISIBLE);
-            cardDescriptionSettings.setVisibility(View.VISIBLE);
             loadPosterImages();
             return;
         }
 
-        // 일반동아리인 경우 포스터/설명 카드 숨김 유지
+        // 일반동아리인 경우 포스터 카드 숨김 유지
         cardPosterSettings.setVisibility(View.GONE);
-        cardDescriptionSettings.setVisibility(View.GONE);
 
         // 대기중인 신청이 있는지 확인
         firebaseManager.getPendingApplicationForClub(clubId, new FirebaseManager.CentralApplicationCallback() {

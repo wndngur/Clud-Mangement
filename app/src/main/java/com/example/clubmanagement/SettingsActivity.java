@@ -831,6 +831,8 @@ public class SettingsActivity extends BaseActivity {
                         setSuperAdminModeStatic(this, false);
                         // 자동 로그인 정보 삭제
                         clearAutoLoginInfo();
+                        // 테마 설정 초기화 (로그아웃 시 기본값으로)
+                        ThemeHelper.clearLocalTheme(this);
 
                         Toast.makeText(this, "로그아웃 되었습니다", Toast.LENGTH_SHORT).show();
 

@@ -14,6 +14,7 @@ public class CarouselItem {
     private String backgroundColor; // Hex color code
     private String clubId;          // 연결된 동아리 ID
     private String clubName;        // 연결된 동아리 이름
+    private String mainActivities;  // 주요 활동
 
     public static final int MAX_IMAGES = 3;
 
@@ -117,6 +118,14 @@ public class CarouselItem {
 
     public void setClubName(String clubName) {
         this.clubName = clubName;
+    }
+
+    public String getMainActivities() {
+        return mainActivities;
+    }
+
+    public void setMainActivities(String mainActivities) {
+        this.mainActivities = mainActivities;
     }
 
     // Multiple images support

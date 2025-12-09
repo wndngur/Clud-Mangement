@@ -35,7 +35,10 @@
       "Bash(C:UsersLGAppDataLocalAndroidSdkplatform-toolsadb.exe -s R3CW60GJW3F logcat -d -s AndroidRuntime:E)",
       "Bash(C:UsersLGAppDataLocalAndroidSdkplatform-toolsadb.exe -s R3CW60GJW3F install -r C:UsersLGAndroidStudioProjectsClubManagementappbuildoutputsapkdebugapp-debug.apk)",
       "Bash(git -C C:UsersLGAndroidStudioProjectsClubManagement diff --stat)",
-      "Bash(git -C C:UsersLGAndroidStudioProjectsClubManagement log --oneline -5)"
+      "Bash(git -C C:UsersLGAndroidStudioProjectsClubManagement log --oneline -5)",
+      "Bash(git -C C:UsersLGAndroidStudioProjectsClubManagement log -3 --oneline)",
+      "Bash(git -C C:UsersLGAndroidStudioProjectsClubManagement diff --cached --stat)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

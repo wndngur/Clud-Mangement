@@ -11,9 +11,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.CentralClubApplication;
 import com.example.clubmanagement.utils.FirebaseManager;
@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
 
-public class CentralApplicationsActivity extends AppCompatActivity {
+public class CentralApplicationsActivity extends BaseActivity {
 
     private LinearLayout llApplicationsContainer;
     private LinearLayout layoutEmpty;

@@ -8,8 +8,7 @@ import android.widget.AutoCompleteTextView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.DocumentData;
 import com.example.clubmanagement.models.SignatureData;
@@ -21,7 +20,7 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
 
-public class DocumentGenerateActivity extends AppCompatActivity {
+public class DocumentGenerateActivity extends BaseActivity {
 
     private AutoCompleteTextView actvDocumentType;
     private TextInputEditText etTitle;

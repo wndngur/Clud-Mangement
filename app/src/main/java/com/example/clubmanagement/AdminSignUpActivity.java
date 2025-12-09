@@ -8,14 +8,13 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 
-public class AdminSignUpActivity extends AppCompatActivity {
+public class AdminSignUpActivity extends BaseActivity {
 
     // 관리자 인증 코드 (숫자 비밀번호)
     private static final String ADMIN_SECRET_CODE = "123456";

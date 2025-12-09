@@ -18,11 +18,11 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.adapters.BudgetTransactionAdapter;
 import com.example.clubmanagement.models.BudgetTransaction;
@@ -45,7 +45,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class BudgetHistoryActivity extends AppCompatActivity {
+public class BudgetHistoryActivity extends BaseActivity {
 
     private FirebaseManager firebaseManager;
     private String clubId;

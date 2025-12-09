@@ -8,9 +8,9 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.views.SignatureView;
 import com.google.android.material.button.MaterialButton;
@@ -21,7 +21,7 @@ import java.io.ByteArrayOutputStream;
  * 서명 캡처 Activity
  * 사용자가 화면에 서명을 그리면 Base64 인코딩된 이미지로 반환
  */
-public class SignatureActivity extends AppCompatActivity {
+public class SignatureActivity extends BaseActivity {
 
     public static final String EXTRA_TITLE = "signature_title";
     public static final String EXTRA_SIGNER_NAME = "signer_name";

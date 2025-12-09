@@ -12,18 +12,18 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-public class MemberRegistrationActivity extends AppCompatActivity {
+public class MemberRegistrationActivity extends BaseActivity {
 
     private ImageView ivBack;
     private TextView tvTitle;

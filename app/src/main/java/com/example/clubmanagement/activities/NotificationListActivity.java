@@ -9,10 +9,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.adapters.NotificationAdapter;
 import com.example.clubmanagement.models.ClubNotification;
@@ -20,7 +20,7 @@ import com.example.clubmanagement.utils.FirebaseManager;
 
 import java.util.List;
 
-public class NotificationListActivity extends AppCompatActivity implements NotificationAdapter.OnNotificationClickListener {
+public class NotificationListActivity extends BaseActivity implements NotificationAdapter.OnNotificationClickListener {
 
     private ImageView ivBack;
     private TextView tvMarkAllRead;

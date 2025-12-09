@@ -10,10 +10,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.adapters.DemotableCentralClubAdapter;
 import com.example.clubmanagement.models.Club;
@@ -23,7 +23,7 @@ import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DemoteCentralClubActivity extends AppCompatActivity {
+public class DemoteCentralClubActivity extends BaseActivity {
 
     private ImageView ivBack;
     private RecyclerView rvCentralClubs;

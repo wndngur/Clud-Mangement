@@ -7,8 +7,7 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.models.User;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.button.MaterialButton;
@@ -17,7 +16,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 
-public class SignUpActivity extends AppCompatActivity {
+public class SignUpActivity extends BaseActivity {
 
     private ImageButton btnBack;
     private TextInputLayout tilEmail, tilPassword, tilPasswordConfirm;

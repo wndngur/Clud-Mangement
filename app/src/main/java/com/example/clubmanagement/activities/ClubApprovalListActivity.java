@@ -7,10 +7,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.adapters.ClubApprovalAdapter;
 import com.example.clubmanagement.models.ClubApplication;
@@ -18,7 +18,7 @@ import com.example.clubmanagement.utils.FirebaseManager;
 
 import java.util.List;
 
-public class ClubApprovalListActivity extends AppCompatActivity implements ClubApprovalAdapter.OnApprovalActionListener {
+public class ClubApprovalListActivity extends BaseActivity implements ClubApprovalAdapter.OnApprovalActionListener {
 
     private ImageView ivBack;
     private RecyclerView rvApplications;

@@ -8,16 +8,16 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 
+import com.example.clubmanagement.BaseActivity;
 import com.example.clubmanagement.R;
 import com.example.clubmanagement.models.ClubNotice;
 import com.example.clubmanagement.utils.FirebaseManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-public class NoticeWriteActivity extends AppCompatActivity {
+public class NoticeWriteActivity extends BaseActivity {
 
     private ImageView ivBack;
     private TextView tvTitle;

@@ -39,9 +39,11 @@ public class ChatNotificationManager {
     private Context context;
     private FirebaseManager firebaseManager;
     private Map<String, ListenerRegistration> chatListeners = new HashMap<>();
+    private ListenerRegistration chatRoomListListener = null;
     private int unreadCount = 0;
     private OnUnreadCountChangeListener unreadCountListener;
     private String currentOpenChatRoomId = null; // 현재 열려있는 채팅방
+    private Map<String, Long> lastReadTimestamps = new HashMap<>(); // 각 채팅방의 마지막 읽은 시간
 
     public interface OnUnreadCountChangeListener {
         void onUnreadCountChanged(int count);
@@ -51,6 +53,7 @@ public class ChatNotificationManager {
         this.context = context.getApplicationContext();
         this.firebaseManager = FirebaseManager.getInstance();
         loadUnreadCount();
+        loadLastReadTimestamps();
         createNotificationChannel();
     }
 
@@ -70,8 +73,13 @@ public class ChatNotificationManager {
 
         android.util.Log.d(TAG, "Starting chat notification listener for user: " + currentUserId);
 
+        // 기존 리스너 정리
+        if (chatRoomListListener != null) {
+            chatRoomListListener.remove();
+        }
+
         // 내가 참여한 모든 채팅방 감시
-        firebaseManager.getDb()
+        chatRoomListListener = firebaseManager.getDb()
                 .collection("chatRooms")
                 .whereArrayContains("participants", currentUserId)
                 .addSnapshotListener((snapshots, error) -> {
@@ -88,6 +96,9 @@ public class ChatNotificationManager {
                             }
                         }
                     }
+
+                    // 초기 로드 시 읽지 않은 메시지 수 계산
+                    calculateTotalUnreadCount(currentUserId);
                 });
     }
 
@@ -148,6 +159,89 @@ public class ChatNotificationManager {
      */
     public void clearCurrentOpenChatRoom() {
         this.currentOpenChatRoomId = null;
+    }
+
+    /**
+     * 특정 채팅방을 읽음으로 표시 (해당 채팅방의 마지막 읽은 시간 업데이트)
+     */
+    public void markChatRoomAsRead(String chatRoomId) {
+        if (chatRoomId == null) return;
+
+        long currentTime = System.currentTimeMillis();
+        lastReadTimestamps.put(chatRoomId, currentTime);
+        saveLastReadTimestamps();
+
+        // 전체 읽지 않은 메시지 수 재계산
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId != null) {
+            calculateTotalUnreadCount(currentUserId);
+        }
+    }
+
+    /**
+     * 전체 읽지 않은 메시지 수 계산
+     */
+    private void calculateTotalUnreadCount(String currentUserId) {
+        firebaseManager.getDb()
+                .collection("chatRooms")
+                .whereArrayContains("participants", currentUserId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    final int[] totalUnread = {0};
+                    final int[] processedRooms = {0};
+                    int totalRooms = querySnapshot.size();
+
+                    if (totalRooms == 0) {
+                        unreadCount = 0;
+                        saveUnreadCount();
+                        notifyUnreadCountChanged();
+                        return;
+                    }
+
+                    for (com.google.firebase.firestore.DocumentSnapshot roomDoc : querySnapshot.getDocuments()) {
+                        String chatRoomId = roomDoc.getId();
+                        Long lastReadTime = lastReadTimestamps.get(chatRoomId);
+                        if (lastReadTime == null) {
+                            lastReadTime = 0L;
+                        }
+
+                        final long finalLastReadTime = lastReadTime;
+
+                        // 각 채팅방의 읽지 않은 메시지 수 계산
+                        firebaseManager.getDb()
+                                .collection("chatRooms")
+                                .document(chatRoomId)
+                                .collection("messages")
+                                .whereGreaterThan("timestamp", finalLastReadTime)
+                                .get()
+                                .addOnSuccessListener(messagesSnapshot -> {
+                                    for (com.google.firebase.firestore.DocumentSnapshot msgDoc : messagesSnapshot.getDocuments()) {
+                                        String senderId = msgDoc.getString("senderId");
+                                        // 내가 보낸 메시지가 아닌 경우만 카운트
+                                        if (senderId != null && !senderId.equals(currentUserId)) {
+                                            totalUnread[0]++;
+                                        }
+                                    }
+
+                                    processedRooms[0]++;
+                                    if (processedRooms[0] >= totalRooms) {
+                                        // 모든 채팅방 처리 완료
+                                        unreadCount = totalUnread[0];
+                                        saveUnreadCount();
+                                        notifyUnreadCountChanged();
+                                        android.util.Log.d(TAG, "Total unread count calculated: " + unreadCount);
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    processedRooms[0]++;
+                                    if (processedRooms[0] >= totalRooms) {
+                                        unreadCount = totalUnread[0];
+                                        saveUnreadCount();
+                                        notifyUnreadCountChanged();
+                                    }
+                                });
+                    }
+                });
     }
 
     /**
@@ -273,9 +367,71 @@ public class ChatNotificationManager {
     }
 
     /**
+     * 마지막 읽은 시간 저장
+     */
+    private void saveLastReadTimestamps() {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+
+        // Map을 JSON 문자열로 변환하여 저장
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Long> entry : lastReadTimestamps.entrySet()) {
+            if (sb.length() > 0) sb.append(";");
+            sb.append(entry.getKey()).append(":").append(entry.getValue());
+        }
+        editor.putString("last_read_timestamps", sb.toString());
+        editor.apply();
+    }
+
+    /**
+     * 마지막 읽은 시간 로드
+     */
+    private void loadLastReadTimestamps() {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String data = prefs.getString("last_read_timestamps", "");
+
+        lastReadTimestamps.clear();
+        if (!data.isEmpty()) {
+            String[] entries = data.split(";");
+            for (String entry : entries) {
+                String[] parts = entry.split(":");
+                if (parts.length == 2) {
+                    try {
+                        lastReadTimestamps.put(parts[0], Long.parseLong(parts[1]));
+                    } catch (NumberFormatException e) {
+                        // 무시
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 읽지 않은 메시지 수 새로고침 (외부에서 호출 가능)
+     */
+    public void refreshUnreadCount() {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId != null) {
+            calculateTotalUnreadCount(currentUserId);
+        }
+    }
+
+    /**
+     * 특정 채팅방의 마지막 읽은 시간 반환
+     */
+    public long getLastReadTimestamp(String chatRoomId) {
+        Long timestamp = lastReadTimestamps.get(chatRoomId);
+        return timestamp != null ? timestamp : 0L;
+    }
+
+    /**
      * 모든 리스너 해제 (로그아웃 시)
      */
     public void stopListening() {
+        if (chatRoomListListener != null) {
+            chatRoomListListener.remove();
+            chatRoomListListener = null;
+        }
         for (ListenerRegistration listener : chatListeners.values()) {
             listener.remove();
         }
