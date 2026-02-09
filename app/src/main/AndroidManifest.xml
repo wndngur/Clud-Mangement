@@ -350,6 +350,12 @@
             android:exported="false"
             android:label="관리자 목록"/>
 
+        <!-- Image Crop Activity (이미지 크롭) -->
+        <activity
+            android:name=".activities.ImageCropActivity"
+            android:exported="false"
+            android:label="사진 편집"/>
+
         <!-- FileProvider for sharing files -->
         <provider
             android:name="androidx.core.content.FileProvider"

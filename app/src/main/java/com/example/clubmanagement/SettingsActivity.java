@@ -825,6 +825,8 @@ public class SettingsActivity extends BaseActivity {
                     .setTitle("로그아웃")
                     .setMessage("로그아웃 하시겠습니까?")
                     .setPositiveButton("로그아웃", (dialog, which) -> {
+                        // 채팅 알림 리스너 중지
+                        getChatNotificationManager().stopListening();
                         // Firebase 로그아웃
                         firebaseAuth.signOut();
                         // 최고 관리자 모드 해제

@@ -1315,6 +1315,7 @@ public class FirebaseManager {
 
     /**
      * Update user profile (name, department, phone)
+     * 사용자 정보 변경 시 가입한 모든 동아리의 멤버 정보도 함께 업데이트
      */
     public void updateUserProfile(String name, String department, String phone, SimpleCallback callback) {
         FirebaseUser firebaseUser = auth.getCurrentUser();
@@ -1323,16 +1324,59 @@ public class FirebaseManager {
             return;
         }
 
+        String userId = firebaseUser.getUid();
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("name", name);
         updates.put("department", department);
         updates.put("phone", phone);
 
+        // 1. 사용자 정보 업데이트
         db.collection("users")
-                .document(firebaseUser.getUid())
+                .document(userId)
                 .update(updates)
-                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnSuccessListener(aVoid -> {
+                    // 2. 사용자가 가입한 모든 동아리의 멤버 정보도 업데이트
+                    updateMemberInfoInAllClubs(userId, name, department, phone);
+                    callback.onSuccess();
+                })
                 .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 사용자가 가입한 모든 동아리의 멤버 정보 업데이트
+     */
+    private void updateMemberInfoInAllClubs(String userId, String name, String department, String phone) {
+        // 모든 동아리 조회
+        db.collection("clubs")
+                .get()
+                .addOnSuccessListener(clubSnapshots -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot clubDoc : clubSnapshots.getDocuments()) {
+                        String clubId = clubDoc.getId();
+
+                        // 해당 동아리의 멤버 중 userId가 있는지 확인 후 업데이트
+                        db.collection("clubs")
+                                .document(clubId)
+                                .collection("members")
+                                .document(userId)
+                                .get()
+                                .addOnSuccessListener(memberDoc -> {
+                                    if (memberDoc.exists()) {
+                                        // 멤버 정보 업데이트
+                                        Map<String, Object> memberUpdates = new HashMap<>();
+                                        memberUpdates.put("name", name);
+                                        memberUpdates.put("department", department);
+                                        memberUpdates.put("phone", phone);
+
+                                        db.collection("clubs")
+                                                .document(clubId)
+                                                .collection("members")
+                                                .document(userId)
+                                                .update(memberUpdates);
+                                    }
+                                });
+                    }
+                });
     }
 
     /**
@@ -5269,22 +5313,18 @@ public class FirebaseManager {
             return;
         }
 
+        // 모든 업데이트를 한 번에 처리
         java.util.Map<String, Object> updateData = new java.util.HashMap<>();
         updateData.put("leftUserId", currentUserId);
         updateData.put("lastMessage", "상대방이 나갔습니다");
         updateData.put("lastMessageTime", System.currentTimeMillis());
+        updateData.put("participants", com.google.firebase.firestore.FieldValue.arrayRemove(currentUserId));
+        updateData.put("lastReadTimes." + currentUserId, com.google.firebase.firestore.FieldValue.delete());
 
         db.collection("chatRooms")
                 .document(chatRoomId)
                 .update(updateData)
-                .addOnSuccessListener(aVoid -> {
-                    // 나간 사용자의 채팅방 목록에서 제거 (participants에서 제거)
-                    db.collection("chatRooms")
-                            .document(chatRoomId)
-                            .update("participants", com.google.firebase.firestore.FieldValue.arrayRemove(currentUserId))
-                            .addOnSuccessListener(aVoid2 -> callback.onSuccess())
-                            .addOnFailureListener(callback::onFailure);
-                })
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
                 .addOnFailureListener(callback::onFailure);
     }
 
@@ -5636,5 +5676,171 @@ public class FirebaseManager {
                     callback.onSuccess(superAdmins);
                 })
                 .addOnFailureListener(callback::onFailure);
+    }
+
+    /**
+     * 동아리 이름 변경 시 연관된 모든 데이터 업데이트
+     * - chatRooms (그룹 채팅방 이름)
+     * - carouselItems / carousel_items (캐러셀 clubName, title)
+     * - members (clubName)
+     * - notices (clubName)
+     * - qna (clubName)
+     * - users (centralClubName, generalClubNames)
+     */
+    public void updateClubNameEverywhere(String clubId, String oldName, String newName, SimpleCallback callback) {
+        WriteBatch batch = db.batch();
+
+        // 1. 그룹 채팅방 이름 업데이트 (group_clubId 형식)
+        String chatRoomId = "group_" + clubId;
+        batch.update(db.collection("chatRooms").document(chatRoomId), "name", newName);
+
+        // 배치 실행 후 나머지는 개별 업데이트 (whereEqualTo 쿼리 필요)
+        batch.commit()
+                .addOnSuccessListener(aVoid -> {
+                    // 2. 캐러셀 아이템 업데이트
+                    updateCarouselClubName(clubId, newName);
+                    // 3. 멤버 정보 업데이트
+                    updateMembersClubName(clubId, newName);
+                    // 4. 공지사항 업데이트
+                    updateNoticesClubName(clubId, newName);
+                    // 5. Q&A 업데이트
+                    updateQnAClubName(clubId, newName);
+                    // 6. 사용자 동아리명 업데이트
+                    updateUsersClubName(clubId, oldName, newName);
+
+                    callback.onSuccess();
+                })
+                .addOnFailureListener(e -> {
+                    // 채팅방 업데이트 실패해도 나머지는 계속 진행
+                    Log.w(TAG, "Failed to update chatRoom name", e);
+                    updateCarouselClubName(clubId, newName);
+                    updateMembersClubName(clubId, newName);
+                    updateNoticesClubName(clubId, newName);
+                    updateQnAClubName(clubId, newName);
+                    updateUsersClubName(clubId, oldName, newName);
+                    callback.onSuccess();
+                });
+    }
+
+    private void updateCarouselClubName(String clubId, String newName) {
+        // carouselItems 컬렉션 업데이트
+        db.collection("carouselItems")
+                .whereEqualTo("clubId", clubId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("clubName", newName);
+                        updates.put("title", newName);
+                        doc.getReference().update(updates);
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to update carouselItems clubName", e));
+
+        // carousel_items 컬렉션도 업데이트 (언더스코어 버전)
+        db.collection("carousel_items")
+                .whereEqualTo("clubId", clubId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("clubName", newName);
+                        updates.put("title", newName);
+                        doc.getReference().update(updates);
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to update carousel_items clubName", e));
+    }
+
+    private void updateMembersClubName(String clubId, String newName) {
+        db.collection("clubs").document(clubId).collection("members")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        doc.getReference().update("clubName", newName);
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to update members clubName", e));
+    }
+
+    private void updateNoticesClubName(String clubId, String newName) {
+        db.collection("clubs").document(clubId).collection("notices")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        doc.getReference().update("clubName", newName);
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to update notices clubName", e));
+    }
+
+    private void updateQnAClubName(String clubId, String newName) {
+        db.collection("clubs").document(clubId).collection("qna")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        doc.getReference().update("clubName", newName);
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to update qna clubName", e));
+    }
+
+    /**
+     * 사용자들의 동아리 이름 업데이트 (centralClubName, generalClubNames)
+     */
+    private void updateUsersClubName(String clubId, String oldName, String newName) {
+        // 해당 동아리의 멤버 목록을 가져와서 각 사용자의 정보 업데이트
+        db.collection("clubs").document(clubId).collection("members")
+                .get()
+                .addOnSuccessListener(membersSnapshot -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot memberDoc : membersSnapshot.getDocuments()) {
+                        String userId = memberDoc.getId();
+                        updateUserClubName(userId, clubId, oldName, newName);
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to get members for club name update", e));
+    }
+
+    /**
+     * 개별 사용자의 동아리 이름 업데이트
+     */
+    private void updateUserClubName(String userId, String clubId, String oldName, String newName) {
+        db.collection("users").document(userId)
+                .get()
+                .addOnSuccessListener(userDoc -> {
+                    if (!userDoc.exists()) return;
+
+                    Map<String, Object> updates = new HashMap<>();
+                    boolean needUpdate = false;
+
+                    // centralClubId가 해당 동아리인 경우 centralClubName 업데이트
+                    String centralClubId = userDoc.getString("centralClubId");
+                    if (clubId.equals(centralClubId)) {
+                        updates.put("centralClubName", newName);
+                        needUpdate = true;
+                    }
+
+                    // generalClubIds에 해당 동아리가 있는 경우 generalClubNames 업데이트
+                    java.util.List<String> generalClubIds = (java.util.List<String>) userDoc.get("generalClubIds");
+                    java.util.List<String> generalClubNames = (java.util.List<String>) userDoc.get("generalClubNames");
+
+                    if (generalClubIds != null && generalClubNames != null) {
+                        int index = generalClubIds.indexOf(clubId);
+                        if (index >= 0 && index < generalClubNames.size()) {
+                            // 새 리스트 생성 (원본 수정 방지)
+                            java.util.List<String> newGeneralClubNames = new java.util.ArrayList<>(generalClubNames);
+                            newGeneralClubNames.set(index, newName);
+                            updates.put("generalClubNames", newGeneralClubNames);
+                            needUpdate = true;
+                        }
+                    }
+
+                    if (needUpdate) {
+                        db.collection("users").document(userId)
+                                .update(updates)
+                                .addOnFailureListener(e -> Log.w(TAG, "Failed to update user club name: " + userId, e));
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to get user for club name update: " + userId, e));
     }
 }

@@ -7,6 +7,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.clubmanagement.utils.ChatNotificationManager;
+import com.example.clubmanagement.utils.FirebaseManager;
 import com.example.clubmanagement.utils.ThemeHelper;
 import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -31,8 +32,39 @@ public abstract class BaseActivity extends AppCompatActivity {
         // Apply theme when activity resumes (in case theme was changed in settings)
         ThemeHelper.applyTheme(this);
 
+        // 로그인 상태이면 채팅 알림 리스너 시작
+        startChatNotificationIfLoggedIn();
+
         // 채팅 뱃지 업데이트
         setupChatBadgeListener();
+    }
+
+    /**
+     * 로그인 상태일 때 채팅 알림 리스너 시작
+     * 로그인/회원가입 화면에서는 시작하지 않음
+     */
+    private void startChatNotificationIfLoggedIn() {
+        // 로그인/회원가입 화면에서는 알림 리스너 시작하지 않음
+        if (isAuthScreen()) {
+            android.util.Log.d("BaseActivity", "Skipping notification listener on auth screen: " + getClass().getSimpleName());
+            return;
+        }
+
+        String currentUserId = FirebaseManager.getInstance().getCurrentUserId();
+        if (currentUserId != null && !chatNotificationManager.isListening()) {
+            chatNotificationManager.startListening();
+            android.util.Log.d("BaseActivity", "Started chat notification listener for user: " + currentUserId);
+        }
+    }
+
+    /**
+     * 현재 화면이 로그인/회원가입 관련 화면인지 확인
+     */
+    private boolean isAuthScreen() {
+        String className = getClass().getSimpleName();
+        return className.equals("LoginActivity") ||
+               className.equals("SignUpActivity") ||
+               className.equals("SplashActivity");
     }
 
     @Override

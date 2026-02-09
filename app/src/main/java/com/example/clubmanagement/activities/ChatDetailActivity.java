@@ -67,11 +67,16 @@ public class ChatDetailActivity extends BaseActivity {
     private boolean partnerHasLeft = false; // 상대방이 나갔는지
     private boolean allMembersMuted = false; // 모든 멤버 채팅 정지 상태
     private boolean isMuted = false; // 현재 사용자 채팅 정지 상태
+    private boolean isExpelledOrLeft = false; // 퇴출되었거나 탈퇴한 상태
 
     // 멤버 정보 저장
     private List<Map<String, String>> memberList = new ArrayList<>();
     // 정지된 멤버 ID 목록
     private Set<String> mutedMembers = new HashSet<>();
+    // 채팅방 전체 인원수
+    private int totalParticipants = 0;
+    // 각 사용자별 마지막 읽은 시간 (서버 시간 기준)
+    private Map<String, Long> lastReadTimes = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,11 +121,13 @@ public class ChatDetailActivity extends BaseActivity {
         loadChatRoomSettings();
         loadChatMembers();
 
-        // 단체 채팅방인 경우 동아리 관리자 여부 확인
+        // 단체 채팅방인 경우 동아리 관리자 여부 확인 및 멤버십 상태 확인
         if (isGroupChat) {
             checkClubAdminStatus();
             // 정지 상태 실시간 감지
             listenForMuteStatus();
+            // 퇴출/탈퇴 상태 확인 (자동 퇴장 또는 나가기 버튼 표시)
+            checkMembershipStatus();
         } else {
             // 개인 채팅방인 경우 상대방이 슈퍼관리자인지, 나갔는지 확인
             checkPartnerSuperAdminStatus();
@@ -131,6 +138,9 @@ public class ChatDetailActivity extends BaseActivity {
 
         // 이 채팅방을 읽음으로 표시
         getChatNotificationManager().markChatRoomAsRead(chatRoomId);
+
+        // 서버 시간 기준으로 마지막 읽은 시간 업데이트
+        updateLastReadTime();
     }
 
     private void initViews() {
@@ -154,6 +164,92 @@ public class ChatDetailActivity extends BaseActivity {
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         rvMessages.setLayoutManager(layoutManager);
         rvMessages.setAdapter(adapter);
+
+        // 채팅방 참여자 수 로드
+        loadParticipantCount();
+    }
+
+    /**
+     * 채팅방 참여자 수 및 마지막 읽은 시간 로드
+     */
+    private void loadParticipantCount() {
+        if (chatRoomId == null) return;
+
+        firebaseManager.getDb()
+                .collection("chatRooms")
+                .document(chatRoomId)
+                .addSnapshotListener((doc, e) -> {
+                    if (e != null || doc == null || !doc.exists()) return;
+
+                    // 참여자 수 로드
+                    List<String> participants = (List<String>) doc.get("participants");
+                    if (participants != null) {
+                        totalParticipants = participants.size();
+                        adapter.setTotalParticipants(totalParticipants);
+
+                        // 개인 채팅방에서 상대방이 나갔는지 확인
+                        if (!isGroupChat && partnerUserId != null) {
+                            boolean partnerStillIn = participants.contains(partnerUserId);
+                            if (!partnerStillIn && !partnerHasLeft) {
+                                // 상대방이 방금 나감
+                                partnerHasLeft = true;
+                                onPartnerLeft();
+                            }
+                        }
+                    }
+
+                    // leftUserId로도 확인 (개인 채팅방)
+                    if (!isGroupChat) {
+                        String leftUserId = doc.getString("leftUserId");
+                        if (leftUserId != null && leftUserId.equals(partnerUserId) && !partnerHasLeft) {
+                            partnerHasLeft = true;
+                            onPartnerLeft();
+                        }
+                    }
+
+                    // 각 사용자별 마지막 읽은 시간 로드
+                    Map<String, Object> readTimesObj = (Map<String, Object>) doc.get("lastReadTimes");
+                    lastReadTimes.clear();
+                    if (readTimesObj != null) {
+                        for (Map.Entry<String, Object> entry : readTimesObj.entrySet()) {
+                            Object value = entry.getValue();
+                            long time = 0;
+                            if (value instanceof Long) {
+                                time = (Long) value;
+                            } else if (value instanceof Number) {
+                                time = ((Number) value).longValue();
+                            } else if (value instanceof com.google.firebase.Timestamp) {
+                                time = ((com.google.firebase.Timestamp) value).toDate().getTime();
+                            }
+                            lastReadTimes.put(entry.getKey(), time);
+                        }
+                    }
+
+                    // 어댑터에 lastReadTimes 전달
+                    adapter.setLastReadTimes(lastReadTimes);
+                });
+    }
+
+    /**
+     * 상대방이 채팅방을 나갔을 때 UI 업데이트
+     */
+    private void onPartnerLeft() {
+        runOnUiThread(() -> {
+            // 제목에 (나감) 표시
+            String currentTitle = tvTitle.getText().toString();
+            if (!currentTitle.contains("(나감)")) {
+                tvTitle.setText(currentTitle + " (나감)");
+            }
+
+            // 입력창 숨기고 안내 메시지 표시
+            inputLayout.setVisibility(View.GONE);
+            layoutMutedMessage.setVisibility(View.VISIBLE);
+
+            TextView tvMutedText = layoutMutedMessage.findViewById(R.id.tvMutedMessage);
+            if (tvMutedText != null) {
+                tvMutedText.setText("상대방이 채팅방을 나가 메시지를 보낼 수 없습니다.");
+            }
+        });
     }
 
     private void loadChatRoomSettings() {
@@ -182,29 +278,43 @@ public class ChatDetailActivity extends BaseActivity {
                     if (doc.exists()) {
                         memberList.clear();
 
+                        // 현재 참여자 목록
+                        List<String> participants = (List<String>) doc.get("participants");
+                        // 나간 사용자 ID
+                        String leftUserId = doc.getString("leftUserId");
+
                         if (isGroupChat) {
                             // 단체 채팅방: participants 배열에서 멤버 로드
-                            List<String> participants = (List<String>) doc.get("participants");
                             if (participants != null) {
                                 for (String participantId : participants) {
-                                    loadMemberInfo(participantId);
+                                    loadMemberInfo(participantId, false);
                                 }
                             }
                         } else {
-                            // 개인 채팅방: user1, user2에서 멤버 로드
+                            // 개인 채팅방: user1, user2에서 멤버 로드 (나간 사람 포함)
                             Map<String, Object> user1 = (Map<String, Object>) doc.get("user1");
                             Map<String, Object> user2 = (Map<String, Object>) doc.get("user2");
 
                             if (user1 != null) {
+                                String oderId = (String) user1.get("userId");
                                 Map<String, String> member = new HashMap<>();
-                                member.put("userId", (String) user1.get("userId"));
+                                member.put("userId", oderId);
                                 member.put("name", (String) user1.get("name"));
+                                // 나간 사용자인지 확인
+                                boolean hasLeft = (leftUserId != null && leftUserId.equals(oderId)) ||
+                                        (participants != null && !participants.contains(oderId));
+                                member.put("hasLeft", hasLeft ? "true" : "false");
                                 memberList.add(member);
                             }
                             if (user2 != null) {
+                                String oderId = (String) user2.get("userId");
                                 Map<String, String> member = new HashMap<>();
-                                member.put("userId", (String) user2.get("userId"));
+                                member.put("userId", oderId);
                                 member.put("name", (String) user2.get("name"));
+                                // 나간 사용자인지 확인
+                                boolean hasLeft = (leftUserId != null && leftUserId.equals(oderId)) ||
+                                        (participants != null && !participants.contains(oderId));
+                                member.put("hasLeft", hasLeft ? "true" : "false");
                                 memberList.add(member);
                             }
                         }
@@ -212,7 +322,7 @@ public class ChatDetailActivity extends BaseActivity {
                 });
     }
 
-    private void loadMemberInfo(String userId) {
+    private void loadMemberInfo(String userId, boolean hasLeft) {
         firebaseManager.getDb()
                 .collection("users")
                 .document(userId)
@@ -226,6 +336,7 @@ public class ChatDetailActivity extends BaseActivity {
                             name = doc.getString("email");
                         }
                         member.put("name", name);
+                        member.put("hasLeft", hasLeft ? "true" : "false");
                         memberList.add(member);
                     }
                 });
@@ -274,14 +385,14 @@ public class ChatDetailActivity extends BaseActivity {
         }
 
         // 나가기 버튼 표시 조건
-        // - 단체 채팅방: 동아리 관리자만 가능
+        // - 단체 채팅방: 동아리 관리자 또는 퇴출/탈퇴된 사용자
         // - 개인 채팅방:
         //   - 슈퍼관리자가 상대인 경우: 슈퍼관리자가 먼저 나가야 내가 나갈 수 있음
         //   - 그 외: 누구나 가능
         boolean canLeave;
         if (isGroupChat) {
-            // 단체 채팅방은 동아리 관리자만 나가기 가능
-            canLeave = isClubAdmin;
+            // 단체 채팅방은 동아리 관리자 또는 퇴출/탈퇴된 사용자만 나가기 가능
+            canLeave = isClubAdmin || isExpelledOrLeft;
         } else {
             // 개인 채팅방
             boolean iAmSuperAdmin = SettingsActivity.isSuperAdminMode(this);
@@ -367,6 +478,7 @@ public class ChatDetailActivity extends BaseActivity {
                 Map<String, String> member = memberList.get(position);
                 String rawName = member.get("name");
                 String memberId = member.get("userId");
+                boolean memberHasLeft = "true".equals(member.get("hasLeft"));
 
                 // 이름 처리
                 final String displayName;
@@ -377,6 +489,18 @@ public class ChatDetailActivity extends BaseActivity {
                 }
                 holder.tvName.setText(displayName);
 
+                // 나간 상태 표시
+                if (memberHasLeft) {
+                    holder.tvRole.setVisibility(View.VISIBLE);
+                    holder.tvRole.setText("나감");
+                    holder.tvRole.setTextColor(0xFFF44336); // 빨간색
+                    // 이름도 흐리게 표시
+                    holder.tvName.setAlpha(0.5f);
+                } else {
+                    holder.tvRole.setVisibility(View.GONE);
+                    holder.tvName.setAlpha(1.0f);
+                }
+
                 // 본인 표시
                 if (memberId != null && memberId.equals(currentUserId)) {
                     holder.tvIsMe.setVisibility(View.VISIBLE);
@@ -384,15 +508,15 @@ public class ChatDetailActivity extends BaseActivity {
                     holder.tvIsMe.setVisibility(View.GONE);
                 }
 
-                // 정지 상태 표시
-                if (mutedMembers.contains(memberId)) {
+                // 정지 상태 표시 (나간 사람은 표시 안 함)
+                if (!memberHasLeft && mutedMembers.contains(memberId)) {
                     holder.tvMuted.setVisibility(View.VISIBLE);
                 } else {
                     holder.tvMuted.setVisibility(View.GONE);
                 }
 
-                // 관리자가 길게 터치 시 개별 멤버 정지/해제 (본인 제외, 단체 채팅방만)
-                if (isGroupChat && isClubAdmin && memberId != null && !memberId.equals(currentUserId)) {
+                // 관리자가 길게 터치 시 개별 멤버 정지/해제 (본인 제외, 단체 채팅방만, 나간 사람 제외)
+                if (isGroupChat && isClubAdmin && memberId != null && !memberId.equals(currentUserId) && !memberHasLeft) {
                     final String finalMemberId = memberId;
                     holder.itemView.setOnLongClickListener(v -> {
                         parentDialog.dismiss();
@@ -413,7 +537,7 @@ public class ChatDetailActivity extends BaseActivity {
 
     // 멤버 ViewHolder
     private static class MemberViewHolder extends RecyclerView.ViewHolder {
-        TextView tvName, tvIsMe, tvMuted;
+        TextView tvName, tvIsMe, tvMuted, tvRole;
         ImageView ivProfile;
 
         MemberViewHolder(View itemView) {
@@ -421,6 +545,7 @@ public class ChatDetailActivity extends BaseActivity {
             tvName = itemView.findViewById(R.id.tvMemberName);
             tvIsMe = itemView.findViewById(R.id.tvIsMe);
             tvMuted = itemView.findViewById(R.id.tvMuted);
+            tvRole = itemView.findViewById(R.id.tvMemberRole);
             ivProfile = itemView.findViewById(R.id.ivMemberProfile);
         }
     }
@@ -438,11 +563,15 @@ public class ChatDetailActivity extends BaseActivity {
         if (chatRoomId == null) return;
 
         if (isGroupChat) {
-            // 단체 채팅방: participants에서 본인 제거
+            // 단체 채팅방: participants에서 본인 제거 + lastReadTimes에서 본인 제거
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("participants", FieldValue.arrayRemove(currentUserId));
+            updates.put("lastReadTimes." + currentUserId, FieldValue.delete());
+
             firebaseManager.getDb()
                     .collection("chatRooms")
                     .document(chatRoomId)
-                    .update("participants", FieldValue.arrayRemove(currentUserId))
+                    .update(updates)
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this, "채팅방을 나갔습니다", Toast.LENGTH_SHORT).show();
                         setResult(RESULT_OK);
@@ -450,32 +579,22 @@ public class ChatDetailActivity extends BaseActivity {
                     })
                     .addOnFailureListener(e -> Toast.makeText(this, "나가기 실패", Toast.LENGTH_SHORT).show());
         } else {
-            // 개인 채팅방: leftUserId 설정 + participants에서 본인 제거
-            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            // 개인 채팅방: leftUserId 설정 + participants에서 본인 제거 + lastReadTimes에서 본인 제거
+            Map<String, Object> updates = new HashMap<>();
             updates.put("leftUserId", currentUserId);
             updates.put("lastMessage", "상대방이 나갔습니다");
             updates.put("lastMessageTime", System.currentTimeMillis());
+            updates.put("participants", FieldValue.arrayRemove(currentUserId));
+            updates.put("lastReadTimes." + currentUserId, FieldValue.delete());
 
             firebaseManager.getDb()
                     .collection("chatRooms")
                     .document(chatRoomId)
                     .update(updates)
                     .addOnSuccessListener(aVoid -> {
-                        // participants에서도 제거
-                        firebaseManager.getDb()
-                                .collection("chatRooms")
-                                .document(chatRoomId)
-                                .update("participants", FieldValue.arrayRemove(currentUserId))
-                                .addOnSuccessListener(aVoid2 -> {
-                                    Toast.makeText(this, "채팅방을 나갔습니다", Toast.LENGTH_SHORT).show();
-                                    setResult(RESULT_OK);
-                                    finish();
-                                })
-                                .addOnFailureListener(e -> {
-                                    Toast.makeText(this, "채팅방을 나갔습니다", Toast.LENGTH_SHORT).show();
-                                    setResult(RESULT_OK);
-                                    finish();
-                                });
+                        Toast.makeText(this, "채팅방을 나갔습니다", Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);
+                        finish();
                     })
                     .addOnFailureListener(e -> Toast.makeText(this, "나가기 실패", Toast.LENGTH_SHORT).show());
         }
@@ -652,6 +771,10 @@ public class ChatDetailActivity extends BaseActivity {
                         rvMessages.post(() -> {
                             rvMessages.scrollToPosition(messages.size() - 1);
                         });
+
+                        // 새 메시지가 있을 때마다 읽음 처리 (채팅방이 열려있으므로)
+                        getChatNotificationManager().markChatRoomAsRead(chatRoomId);
+                        updateLastReadTime();
                     }
                 });
     }
@@ -662,12 +785,17 @@ public class ChatDetailActivity extends BaseActivity {
 
         etMessage.setText("");
 
+        // 보낸 사람은 자동으로 읽음 처리
+        List<String> readByList = new ArrayList<>();
+        readByList.add(currentUserId);
+
         Map<String, Object> messageData = new HashMap<>();
         messageData.put("senderId", currentUserId);
         messageData.put("senderName", currentUserName != null ? currentUserName : "사용자");
         messageData.put("message", messageText);
         messageData.put("timestamp", FieldValue.serverTimestamp());
         messageData.put("isRead", false);
+        messageData.put("readBy", readByList); // 읽은 사람 목록 추가
 
         // 메시지 저장
         firebaseManager.getDb()
@@ -678,6 +806,10 @@ public class ChatDetailActivity extends BaseActivity {
                 .addOnSuccessListener(documentReference -> {
                     // 채팅방 정보 업데이트 (마지막 메시지, 시간)
                     updateChatRoomLastMessage(messageText);
+
+                    // 메시지 전송 시 읽음 처리 (채팅방에 있으므로 읽은 것으로 처리)
+                    getChatNotificationManager().markChatRoomAsRead(chatRoomId);
+                    updateLastReadTime();
 
                     // 메시지 전송 후 맨 아래로 스크롤
                     rvMessages.postDelayed(() -> {
@@ -698,6 +830,31 @@ public class ChatDetailActivity extends BaseActivity {
                 .collection("chatRooms")
                 .document(chatRoomId)
                 .update(updates);
+    }
+
+    /**
+     * 채팅방의 마지막 읽은 시간을 서버 시간으로 업데이트
+     */
+    private void updateLastReadTime() {
+        if (chatRoomId == null || currentUserId == null) return;
+
+        // lastReadTimes.{userId} = 서버 시간
+        firebaseManager.getDb()
+                .collection("chatRooms")
+                .document(chatRoomId)
+                .update("lastReadTimes." + currentUserId, FieldValue.serverTimestamp())
+                .addOnFailureListener(e -> {
+                    // 필드가 없으면 새로 생성
+                    Map<String, Object> data = new HashMap<>();
+                    Map<String, Object> lastReadTimesMap = new HashMap<>();
+                    lastReadTimesMap.put(currentUserId, FieldValue.serverTimestamp());
+                    data.put("lastReadTimes", lastReadTimesMap);
+
+                    firebaseManager.getDb()
+                            .collection("chatRooms")
+                            .document(chatRoomId)
+                            .set(data, com.google.firebase.firestore.SetOptions.merge());
+                });
     }
 
     /**
@@ -750,7 +907,7 @@ public class ChatDetailActivity extends BaseActivity {
     private void checkPartnerSuperAdminStatus() {
         if (chatRoomId == null || partnerUserId == null) return;
 
-        // 1. 채팅방 정보에서 상대방이 나갔는지 확인 (leftUserId)
+        // 1. 채팅방 정보에서 상대방이 나갔는지 확인 (leftUserId 또는 participants)
         firebaseManager.getDb()
                 .collection("chatRooms")
                 .document(chatRoomId)
@@ -758,9 +915,15 @@ public class ChatDetailActivity extends BaseActivity {
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String leftUserId = documentSnapshot.getString("leftUserId");
-                        // 상대방이 나갔는지 확인
-                        if (leftUserId != null && leftUserId.equals(partnerUserId)) {
+                        List<String> participants = (List<String>) documentSnapshot.get("participants");
+
+                        // 상대방이 나갔는지 확인 (leftUserId로 확인하거나 participants에 없는 경우)
+                        boolean hasLeft = (leftUserId != null && leftUserId.equals(partnerUserId)) ||
+                                (participants != null && !participants.contains(partnerUserId));
+
+                        if (hasLeft && !partnerHasLeft) {
                             partnerHasLeft = true;
+                            onPartnerLeft();
                         }
                     }
                 });
@@ -941,6 +1104,8 @@ public class ChatDetailActivity extends BaseActivity {
         // 채팅방을 나갈 때 읽음 처리 갱신
         if (chatRoomId != null) {
             getChatNotificationManager().markChatRoomAsRead(chatRoomId);
+            // 서버 시간 기준으로 마지막 읽은 시간 업데이트
+            updateLastReadTime();
         }
     }
 
@@ -955,5 +1120,162 @@ public class ChatDetailActivity extends BaseActivity {
         }
         // 현재 열린 채팅방 해제
         getChatNotificationManager().clearCurrentOpenChatRoom();
+    }
+
+    /**
+     * 단체 채팅방에서 현재 사용자의 동아리 멤버십 상태 확인
+     * 퇴출되었거나 탈퇴한 경우 자동 퇴장 또는 나가기 버튼 표시
+     */
+    private void checkMembershipStatus() {
+        if (chatRoomId == null || !chatRoomId.startsWith("group_")) {
+            return;
+        }
+
+        // chatRoomId에서 clubId 추출 (group_clubId 형식)
+        String clubId = chatRoomId.substring("group_".length());
+
+        // 1. 먼저 퇴출 이력 확인
+        firebaseManager.getDb()
+                .collection("users")
+                .document(currentUserId)
+                .get()
+                .addOnSuccessListener(userDoc -> {
+                    boolean wasExpelled = false;
+
+                    if (userDoc.exists()) {
+                        // 퇴출 이력 확인
+                        List<Map<String, Object>> expulsionHistory =
+                            (List<Map<String, Object>>) userDoc.get("expulsionHistory");
+                        if (expulsionHistory != null) {
+                            for (Map<String, Object> record : expulsionHistory) {
+                                String expelledClubId = (String) record.get("clubId");
+                                if (clubId.equals(expelledClubId)) {
+                                    wasExpelled = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (wasExpelled) {
+                        // 퇴출된 사용자 - 자동으로 채팅방에서 나가게 처리
+                        handleExpelledOrLeftUser(true);
+                    } else {
+                        // 2. 퇴출 이력이 없으면 현재 멤버인지 확인
+                        checkCurrentMembership(clubId);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // 실패 시 멤버십 확인으로 진행
+                    checkCurrentMembership(clubId);
+                });
+    }
+
+    /**
+     * 현재 동아리 멤버인지 확인
+     */
+    private void checkCurrentMembership(String clubId) {
+        firebaseManager.getClubMembers(clubId, new FirebaseManager.MembersCallback() {
+            @Override
+            public void onSuccess(List<com.example.clubmanagement.models.Member> members) {
+                boolean isMember = false;
+                for (com.example.clubmanagement.models.Member member : members) {
+                    if (currentUserId != null && currentUserId.equals(member.getUserId())) {
+                        isMember = true;
+                        break;
+                    }
+                }
+
+                if (!isMember) {
+                    // 멤버가 아님 (탈퇴했거나 가입한 적 없음)
+                    // 채팅방 participants에 포함되어 있는지 확인
+                    checkChatRoomParticipant();
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                // 실패 시 채팅방 참여자 목록으로 확인
+                checkChatRoomParticipant();
+            }
+        });
+    }
+
+    /**
+     * 채팅방 참여자 목록에 있는지 확인
+     * 동아리 멤버는 아니지만 채팅방에 남아있는 경우 = 탈퇴한 사용자
+     */
+    private void checkChatRoomParticipant() {
+        firebaseManager.getDb()
+                .collection("chatRooms")
+                .document(chatRoomId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        List<String> participants = (List<String>) doc.get("participants");
+                        if (participants != null && participants.contains(currentUserId)) {
+                            // 동아리 멤버는 아니지만 채팅방에 있음 = 탈퇴한 사용자
+                            handleExpelledOrLeftUser(false);
+                        }
+                    }
+                });
+    }
+
+    /**
+     * 퇴출되었거나 탈퇴한 사용자 처리
+     * @param autoLeave true면 자동 퇴장, false면 나가기 버튼만 표시
+     */
+    private void handleExpelledOrLeftUser(boolean autoLeave) {
+        isExpelledOrLeft = true;
+
+        // 입력창 비활성화 (메시지 보내기 불가)
+        runOnUiThread(() -> {
+            inputLayout.setVisibility(View.GONE);
+            layoutMutedMessage.setVisibility(View.VISIBLE);
+
+            // 정지 메시지 텍스트 변경
+            TextView tvMutedText = layoutMutedMessage.findViewById(R.id.tvMutedMessage);
+            if (tvMutedText != null) {
+                tvMutedText.setText("동아리에서 탈퇴하거나 퇴출되어 메시지를 보낼 수 없습니다.\n설정에서 채팅방을 나갈 수 있습니다.");
+            }
+        });
+
+        if (autoLeave) {
+            // 퇴출된 경우 자동으로 채팅방에서 나가기
+            new AlertDialog.Builder(this)
+                    .setTitle("동아리 퇴출")
+                    .setMessage("해당 동아리에서 퇴출되어 채팅방에서 자동으로 나가집니다.")
+                    .setPositiveButton("확인", (dialog, which) -> {
+                        leaveGroupChatSilently();
+                    })
+                    .setCancelable(false)
+                    .show();
+        }
+    }
+
+    /**
+     * 단체 채팅방에서 조용히 나가기 (토스트 메시지 없이)
+     */
+    private void leaveGroupChatSilently() {
+        if (chatRoomId == null) return;
+
+        // participants에서 제거 + lastReadTimes에서 제거
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("participants", FieldValue.arrayRemove(currentUserId));
+        updates.put("lastReadTimes." + currentUserId, FieldValue.delete());
+
+        firebaseManager.getDb()
+                .collection("chatRooms")
+                .document(chatRoomId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    setResult(RESULT_OK);
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    // 실패해도 화면 종료
+                    setResult(RESULT_OK);
+                    finish();
+                });
     }
 }

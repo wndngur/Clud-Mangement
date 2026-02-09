@@ -92,10 +92,13 @@
     <LinearLayout
         android:id="@+id/layoutMutedMessage"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="wrap_content"
+        android:minHeight="56dp"
         android:orientation="horizontal"
         android:gravity="center"
         android:background="#FFEBEE"
+        android:paddingVertical="12dp"
+        android:paddingHorizontal="16dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -106,8 +109,10 @@
             app:tint="#F44336"/>
 
         <TextView
-            android:layout_width="wrap_content"
+            android:id="@+id/tvMutedMessage"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="관리자에 의해 채팅이 정지되었습니다"
             android:textSize="14sp"

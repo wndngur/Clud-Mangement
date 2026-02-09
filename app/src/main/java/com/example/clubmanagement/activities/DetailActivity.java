@@ -98,6 +98,8 @@ public class DetailActivity extends BaseActivity {
     private boolean isMyClub = false;  // 현재 보고 있는 동아리가 내 동아리인지
 
     private ActivityResultLauncher<Intent> imagePickerLauncher;
+    private ActivityResultLauncher<Intent> imageCropLauncher;
+    private Uri selectedImageUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -326,17 +328,131 @@ public class DetailActivity extends BaseActivity {
     }
 
     private void setupImagePickerLauncher() {
+        // 이미지 선택 후 크롭 화면으로 이동
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        Uri imageUri = result.getData().getData();
-                        if (imageUri != null) {
-                            uploadImage(imageUri);
+                        selectedImageUri = result.getData().getData();
+                        if (selectedImageUri != null) {
+                            // 크롭 화면으로 이동
+                            openCropActivity(selectedImageUri);
                         }
                     }
                 }
         );
+
+        // 크롭 결과 처리
+        imageCropLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        String croppedImagePath = result.getData().getStringExtra(ImageCropActivity.EXTRA_CROPPED_IMAGE_PATH);
+                        if (croppedImagePath != null) {
+                            uploadCroppedImage(croppedImagePath);
+                        }
+                    }
+                }
+        );
+    }
+
+    private void openCropActivity(Uri imageUri) {
+        Intent intent = new Intent(this, ImageCropActivity.class);
+        intent.putExtra(ImageCropActivity.EXTRA_IMAGE_URI, imageUri);
+        imageCropLauncher.launch(intent);
+    }
+
+    private void uploadCroppedImage(String imagePath) {
+        progressBar.setVisibility(View.VISIBLE);
+
+        try {
+            java.io.File file = new java.io.File(imagePath);
+            android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeFile(imagePath);
+
+            if (bitmap == null) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, "이미지를 불러올 수 없습니다", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, baos);
+            byte[] imageData = baos.toByteArray();
+
+            // 동아리 ID 가져오기
+            String clubId = getClubId();
+            if (clubId == null || clubId.isEmpty()) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, "동아리 정보를 찾을 수 없습니다", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Firebase에 이미지 업로드
+            firebaseManager.uploadCarouselImage(clubId, imageData, new FirebaseManager.SignatureCallback() {
+                @Override
+                public void onSuccess(String downloadUrl) {
+                    // 캐러셀 아이템 업데이트
+                    updateCarouselItemImage(downloadUrl);
+                    // 임시 파일 삭제
+                    file.delete();
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(DetailActivity.this, "이미지 업로드 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+
+        } catch (Exception e) {
+            progressBar.setVisibility(View.GONE);
+            Toast.makeText(this, "이미지 처리 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateCarouselItemImage(String imageUrl) {
+        if (currentItem == null) {
+            // 새 캐러셀 아이템 생성
+            String clubId = getClubId();
+            currentItem = new CarouselItem();
+            currentItem.setClubId(clubId);
+            currentItem.setClubName(clubName != null ? clubName : "동아리");
+            currentItem.setTitle(clubName != null ? clubName : "동아리");
+            currentItem.setPosition(pageIndex);
+        }
+
+        currentItem.setImageUrl(imageUrl);
+
+        firebaseManager.saveCarouselItem(currentItem, new FirebaseManager.CarouselCallback() {
+            @Override
+            public void onSuccess(CarouselItem item) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(DetailActivity.this, "포스터가 변경되었습니다", Toast.LENGTH_SHORT).show();
+
+                // 이미지 새로고침
+                currentItem = item;
+                loadCarouselImages(item);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(DetailActivity.this, "저장 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private String getClubId() {
+        // Intent에서 받은 club_id 사용
+        String clubId = getIntent().getStringExtra("club_id");
+        if (clubId != null && !clubId.isEmpty()) {
+            return clubId;
+        }
+        // currentItem에서 가져오기
+        if (currentItem != null && currentItem.getClubId() != null) {
+            return currentItem.getClubId();
+        }
+        return null;
     }
 
     private void checkAdminStatus() {
@@ -675,6 +791,15 @@ public class DetailActivity extends BaseActivity {
             public void onSuccess(com.example.clubmanagement.models.Club club) {
                 if (club != null) {
                     loadedClub = club;
+
+                    // 동아리 이름을 clubs 컬렉션의 최신 데이터로 업데이트
+                    String latestClubName = club.getName();
+                    if (latestClubName != null && !latestClubName.isEmpty()) {
+                        tvDetailTitle.setText(latestClubName);
+                        // clubName 변수도 업데이트
+                        clubName = latestClubName;
+                    }
+
                     // 정보가 있으면 "자세히 보기" 버튼 표시
                     if (hasClubInfo(club)) {
                         btnViewMoreDetails.setVisibility(View.VISIBLE);

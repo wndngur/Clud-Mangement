@@ -2,6 +2,7 @@ package com.example.clubmanagement.activities;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -24,6 +25,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 
 public class CarouselEditActivity extends BaseActivity {
@@ -37,13 +39,16 @@ public class CarouselEditActivity extends BaseActivity {
     private ImageView ivNewPoster;
     private MaterialCardView cardNewImage;
     private MaterialButton btnSelectImage;
+    private MaterialButton btnAdjustSize;
     private MaterialButton btnSave;
     private ProgressBar progressBar;
 
     private Uri selectedImageUri;
+    private String croppedImagePath;  // 크롭된 이미지 경로
     private CarouselItem currentCarouselItem;
 
     private ActivityResultLauncher<Intent> imagePickerLauncher;
+    private ActivityResultLauncher<Intent> imageCropLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,10 +77,14 @@ public class CarouselEditActivity extends BaseActivity {
         ivNewPoster = findViewById(R.id.ivNewPoster);
         cardNewImage = findViewById(R.id.cardNewImage);
         btnSelectImage = findViewById(R.id.btnSelectImage);
+        btnAdjustSize = findViewById(R.id.btnAdjustSize);
         btnSave = findViewById(R.id.btnSave);
         progressBar = findViewById(R.id.progressBar);
 
         tvClubName.setText(clubName + " 포스터");
+
+        // 초기에는 사이즈 조절 버튼 비활성화 (저장된 이미지가 없으면)
+        btnAdjustSize.setEnabled(false);
     }
 
     private void setupToolbar() {
@@ -91,22 +100,55 @@ public class CarouselEditActivity extends BaseActivity {
     }
 
     private void setupImagePicker() {
+        // 이미지 선택 후 크롭 화면으로 이동
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         selectedImageUri = result.getData().getData();
                         if (selectedImageUri != null) {
-                            showNewImagePreview();
+                            // 크롭 화면으로 이동
+                            openCropActivity(selectedImageUri);
+                        }
+                    }
+                }
+        );
+
+        // 크롭 결과 처리
+        imageCropLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        croppedImagePath = result.getData().getStringExtra(ImageCropActivity.EXTRA_CROPPED_IMAGE_PATH);
+                        if (croppedImagePath != null) {
+                            showCroppedImagePreview();
                         }
                     }
                 }
         );
     }
 
+    private void openCropActivity(Uri imageUri) {
+        Intent intent = new Intent(this, ImageCropActivity.class);
+        intent.putExtra(ImageCropActivity.EXTRA_IMAGE_URI, imageUri);
+        imageCropLauncher.launch(intent);
+    }
+
     private void setupListeners() {
         btnSelectImage.setOnClickListener(v -> openGallery());
+        btnAdjustSize.setOnClickListener(v -> adjustCurrentPosterSize());
         btnSave.setOnClickListener(v -> saveNewPoster());
+    }
+
+    private void adjustCurrentPosterSize() {
+        // 현재 저장된 포스터 이미지가 있으면 크롭 화면 열기
+        if (currentCarouselItem != null && currentCarouselItem.hasFirebaseImage()) {
+            // Firebase 이미지 URL을 Uri로 변환하여 크롭 화면 열기
+            Uri imageUri = Uri.parse(currentCarouselItem.getImageUrl());
+            openCropActivity(imageUri);
+        } else {
+            Toast.makeText(this, "먼저 포스터 이미지를 저장해주세요", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void openGallery() {
@@ -121,6 +163,18 @@ public class CarouselEditActivity extends BaseActivity {
         cardNewImage.setVisibility(View.VISIBLE);
         Glide.with(CarouselEditActivity.this)
                 .load(selectedImageUri)
+                .centerCrop()
+                .into(ivNewPoster);
+        btnSave.setEnabled(true);
+    }
+
+    private void showCroppedImagePreview() {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        cardNewImage.setVisibility(View.VISIBLE);
+        Glide.with(CarouselEditActivity.this)
+                .load(new File(croppedImagePath))
                 .centerCrop()
                 .into(ivNewPoster);
         btnSave.setEnabled(true);
@@ -167,15 +221,20 @@ public class CarouselEditActivity extends BaseActivity {
                     .centerCrop()
                     .placeholder(R.drawable.carousel_image_1)
                     .into(ivCurrentPoster);
+            // Firebase 이미지가 있으면 사이즈 조절 버튼 활성화
+            btnAdjustSize.setEnabled(true);
         } else if (item.getImageRes() != 0) {
             ivCurrentPoster.setImageResource(item.getImageRes());
+            btnAdjustSize.setEnabled(false);
         } else {
             ivCurrentPoster.setImageResource(R.drawable.carousel_image_1);
+            btnAdjustSize.setEnabled(false);
         }
     }
 
     private void saveNewPoster() {
-        if (selectedImageUri == null) {
+        // 크롭된 이미지가 있으면 우선 사용, 없으면 원본 이미지 사용
+        if (croppedImagePath == null && selectedImageUri == null) {
             Toast.makeText(this, "이미지를 선택해주세요", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -185,9 +244,25 @@ public class CarouselEditActivity extends BaseActivity {
         btnSelectImage.setEnabled(false);
 
         try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedImageUri);
+            Bitmap bitmap;
+            if (croppedImagePath != null) {
+                // 크롭된 이미지 사용
+                bitmap = BitmapFactory.decodeFile(croppedImagePath);
+            } else {
+                // 원본 이미지 사용 (크롭 안 한 경우)
+                bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedImageUri);
+            }
+
+            if (bitmap == null) {
+                progressBar.setVisibility(View.GONE);
+                btnSave.setEnabled(true);
+                btnSelectImage.setEnabled(true);
+                Toast.makeText(this, "이미지를 불러올 수 없습니다", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos);
             byte[] imageData = baos.toByteArray();
 
             // 캐러셀 이미지 업로드
@@ -196,6 +271,11 @@ public class CarouselEditActivity extends BaseActivity {
                 public void onSuccess(String downloadUrl) {
                     // 캐러셀 아이템 업데이트
                     updateCarouselItem(downloadUrl);
+
+                    // 임시 파일 삭제
+                    if (croppedImagePath != null) {
+                        new File(croppedImagePath).delete();
+                    }
                 }
 
                 @Override
@@ -243,6 +323,7 @@ public class CarouselEditActivity extends BaseActivity {
                 // 새 이미지 미리보기 숨김
                 cardNewImage.setVisibility(View.GONE);
                 selectedImageUri = null;
+                croppedImagePath = null;
                 btnSave.setEnabled(false);
             }
 

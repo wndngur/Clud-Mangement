@@ -36,7 +36,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="260dp"
+        android:layout_marginTop="270dp"
         android:elevation="15dp">
         <!-- Indicator dots will be added dynamically -->
     </LinearLayout>
@@ -97,7 +97,7 @@
         android:layout_height="match_parent"
         app:cardCornerRadius="24dp"
         app:cardElevation="12dp"
-        android:layout_marginTop="276dp"
+        android:layout_marginTop="300dp"
         android:layout_gravity="top">
 
         <androidx.core.widget.NestedScrollView

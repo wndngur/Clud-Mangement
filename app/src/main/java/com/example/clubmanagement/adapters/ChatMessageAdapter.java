@@ -17,14 +17,18 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.MessageViewHolder> {
 
     private List<ChatMessage> messages = new ArrayList<>();
     private String currentUserId;
     private OnMessageLongClickListener longClickListener;
+    private int totalParticipants = 2; // 기본값: 1:1 채팅
+    private Map<String, Long> lastReadTimes = new HashMap<>(); // 각 사용자별 마지막 읽은 시간
 
     public interface OnMessageLongClickListener {
         void onMessageLongClick(ChatMessage message, boolean isOwnMessage);
@@ -36,6 +40,25 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
 
     public void setOnMessageLongClickListener(OnMessageLongClickListener listener) {
         this.longClickListener = listener;
+    }
+
+    /**
+     * 채팅방 전체 참여자 수 설정
+     */
+    public void setTotalParticipants(int count) {
+        this.totalParticipants = count;
+        notifyDataSetChanged();
+    }
+
+    /**
+     * 각 사용자별 마지막 읽은 시간 설정
+     */
+    public void setLastReadTimes(Map<String, Long> times) {
+        this.lastReadTimes.clear();
+        if (times != null) {
+            this.lastReadTimes.putAll(times);
+        }
+        notifyDataSetChanged();
     }
 
     public void setMessages(List<ChatMessage> newMessages) {
@@ -73,7 +96,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
             showDateDivider = !isSameDay(prevMessage.getTimestamp(), message.getTimestamp());
         }
 
-        holder.bind(message, currentUserId, showDateDivider);
+        holder.bind(message, currentUserId, showDateDivider, totalParticipants, lastReadTimes);
 
         // 롱클릭 리스너 설정
         View.OnLongClickListener longClick = v -> {
@@ -104,7 +127,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
     static class MessageViewHolder extends RecyclerView.ViewHolder {
         LinearLayout layoutSent, layoutReceived;
         TextView tvMessageSent, tvTimeSent, tvMessageReceived, tvTimeReceived, tvSenderName;
-        TextView tvDateDivider, tvReadStatus;
+        TextView tvDateDivider, tvReadStatus, tvUnreadCount;
         ImageView ivProfile;
 
         MessageViewHolder(@NonNull View itemView) {
@@ -119,9 +142,10 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
             ivProfile = itemView.findViewById(R.id.ivProfile);
             tvDateDivider = itemView.findViewById(R.id.tvDateDivider);
             tvReadStatus = itemView.findViewById(R.id.tvReadStatus);
+            tvUnreadCount = itemView.findViewById(R.id.tvUnreadCount);
         }
 
-        void bind(ChatMessage message, String currentUserId, boolean showDateDivider) {
+        void bind(ChatMessage message, String currentUserId, boolean showDateDivider, int totalParticipants, Map<String, Long> lastReadTimes) {
             boolean isSent = message.getSenderId() != null && message.getSenderId().equals(currentUserId);
 
             // 날짜 구분선 표시
@@ -138,13 +162,46 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
                 tvMessageSent.setText(message.getMessage());
                 tvTimeSent.setText(formatTime(message.getTimestamp()));
 
-                // 읽음 표시 (선택 사항)
-                if (tvReadStatus != null) {
-                    if (message.isRead()) {
-                        tvReadStatus.setVisibility(View.GONE);
-                    } else {
-                        tvReadStatus.setVisibility(View.GONE); // 현재는 숨김
+                // 읽지 않은 수 표시 (서버 시간 기준)
+                // 메시지 timestamp보다 lastReadTime이 크거나 같은 사용자 = 읽은 사람
+                if (tvUnreadCount != null) {
+                    long messageTime = message.getTimestamp();
+                    int readCount = 0;
+
+                    // 각 사용자의 lastReadTime과 메시지 시간 비교
+                    for (Map.Entry<String, Long> entry : lastReadTimes.entrySet()) {
+                        Long readTime = entry.getValue();
+                        if (readTime != null && readTime >= messageTime) {
+                            readCount++;
+                        }
                     }
+
+                    // 안 읽은 사람 수 = 전체 참여자 - 읽은 사람
+                    // 단, lastReadTimes에 기록이 없는 사용자도 있을 수 있으므로
+                    // 최소한 본인은 읽은 것으로 처리 (본인 메시지이므로)
+                    if (readCount == 0) {
+                        readCount = 1; // 최소 본인은 읽음
+                    }
+
+                    int unreadCount = totalParticipants - readCount;
+
+                    // 음수 방지
+                    if (unreadCount < 0) {
+                        unreadCount = 0;
+                    }
+
+                    if (unreadCount > 0) {
+                        tvUnreadCount.setVisibility(View.VISIBLE);
+                        tvUnreadCount.setText(String.valueOf(unreadCount));
+                    } else {
+                        // 모두 읽음
+                        tvUnreadCount.setVisibility(View.GONE);
+                    }
+                }
+
+                // 기존 읽음 표시는 숨김
+                if (tvReadStatus != null) {
+                    tvReadStatus.setVisibility(View.GONE);
                 }
             } else {
                 layoutSent.setVisibility(View.GONE);

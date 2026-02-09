@@ -1523,6 +1523,8 @@ public class ClubMainActivity extends BaseActivity {
         progressBar.setVisibility(View.VISIBLE);
 
         String clubId = getClubId();
+        String oldClubName = clubName; // 변경 전 이름 저장
+
         if (currentClub == null) {
             currentClub = new com.example.clubmanagement.models.Club(clubId, newClubName);
         } else {
@@ -1532,11 +1534,26 @@ public class ClubMainActivity extends BaseActivity {
         firebaseManager.saveClub(currentClub, new FirebaseManager.ClubCallback() {
             @Override
             public void onSuccess(com.example.clubmanagement.models.Club club) {
-                progressBar.setVisibility(View.GONE);
-                clubName = newClubName;
-                currentClub = club;
-                tvClubName.setText(clubName);
-                Toast.makeText(ClubMainActivity.this, "동아리명이 변경되었습니다", Toast.LENGTH_SHORT).show();
+                // 동아리 정보 저장 성공 후 연관 데이터도 모두 업데이트
+                firebaseManager.updateClubNameEverywhere(clubId, oldClubName, newClubName, new FirebaseManager.SimpleCallback() {
+                    @Override
+                    public void onSuccess() {
+                        progressBar.setVisibility(View.GONE);
+                        clubName = newClubName;
+                        currentClub = club;
+                        tvClubName.setText(clubName);
+                        Toast.makeText(ClubMainActivity.this, "동아리명이 변경되었습니다", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        progressBar.setVisibility(View.GONE);
+                        clubName = newClubName;
+                        currentClub = club;
+                        tvClubName.setText(clubName);
+                        Toast.makeText(ClubMainActivity.this, "동아리명이 변경되었습니다 (일부 데이터 동기화 실패)", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
 
             @Override

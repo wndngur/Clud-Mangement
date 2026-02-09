@@ -109,18 +109,41 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Select Image Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSelectImage"
+            <!-- Button Row: Select Image + Adjust Size -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="갤러리에서 이미지 선택"
-                android:textSize="16sp"
-                app:icon="@android:drawable/ic_menu_gallery"
-                app:iconGravity="textStart"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                app:cornerRadius="12dp"
-                android:layout_marginBottom="16dp"/>
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <!-- Select Image Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSelectImage"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="56dp"
+                    android:text="이미지 선택"
+                    android:textSize="14sp"
+                    app:icon="@android:drawable/ic_menu_gallery"
+                    app:iconGravity="textStart"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:cornerRadius="12dp"
+                    android:layout_marginEnd="8dp"/>
+
+                <!-- Adjust Size Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAdjustSize"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="56dp"
+                    android:text="사이즈 조절"
+                    android:textSize="14sp"
+                    app:icon="@android:drawable/ic_menu_crop"
+                    app:iconGravity="textStart"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:cornerRadius="12dp"/>
+
+            </LinearLayout>
 
             <!-- Save Button -->
             <com.google.android.material.button.MaterialButton

@@ -641,13 +641,60 @@ public class MemberManagementActivity extends BaseActivity {
 
     // 직급 설정 다이얼로그
     private void showSetRoleDialog(Member member) {
-        String[] roles = {"부회장", "총무", "회계", "회원"};
+        String currentRole = member.getRole();
+        boolean hasRole = currentRole != null && !currentRole.isEmpty() && !"회원".equals(currentRole);
+
+        // 현재 동아리에서 이미 부여된 직급 수집
+        List<String> assignedRoles = new ArrayList<>();
+        for (Member m : membersList) {
+            String role = m.getRole();
+            if (role != null && !role.isEmpty() && !"회원".equals(role)) {
+                // 본인의 직급은 제외 (본인은 자신의 직급을 유지할 수 있으므로)
+                if (!m.getUserId().equals(member.getUserId())) {
+                    assignedRoles.add(role);
+                }
+            }
+        }
+
+        // 선택 가능한 직급 목록 생성 (이미 부여된 직급 제외)
+        List<String> availableRoles = new ArrayList<>();
+        String[] allRoles = new String[]{"회장", "부회장", "총무", "회계", "회원"};
+
+        for (String role : allRoles) {
+            // "회원"은 항상 선택 가능, 나머지는 아직 부여되지 않은 경우만
+            if ("회원".equals(role) || !assignedRoles.contains(role)) {
+                availableRoles.add(role);
+            }
+        }
+
+        // 이미 직급이 있는 경우 "직급 파면" 옵션 추가
+        if (hasRole) {
+            availableRoles.add(0, "직급 파면");
+        }
+
+        String[] roles = availableRoles.toArray(new String[0]);
 
         new AlertDialog.Builder(this)
             .setTitle("직급 설정")
             .setItems(roles, (dialog, which) -> {
                 String selectedRole = roles[which];
-                setMemberRole(member, selectedRole);
+                if ("직급 파면".equals(selectedRole)) {
+                    showRemoveRoleDialog(member);
+                } else {
+                    setMemberRole(member, selectedRole);
+                }
+            })
+            .setNegativeButton("취소", null)
+            .show();
+    }
+
+    // 직급 파면 확인 다이얼로그
+    private void showRemoveRoleDialog(Member member) {
+        new AlertDialog.Builder(this)
+            .setTitle("직급 파면")
+            .setMessage(member.getName() + "님의 '" + member.getRole() + "' 직급을 파면하시겠습니까?\n\n일반 회원으로 변경됩니다.")
+            .setPositiveButton("파면", (dialog, which) -> {
+                setMemberRole(member, "회원");
             })
             .setNegativeButton("취소", null)
             .show();
